@@ -2329,8 +2329,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 624, y: -153}
-  m_SizeDelta: {x: 160, y: 20}
+  m_AnchoredPosition: {x: 543.88074, y: -162.538}
+  m_SizeDelta: {x: 147.024, y: 25.788}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &846532475
 MonoBehaviour:
@@ -3711,8 +3711,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 624, y: -151}
-  m_SizeDelta: {x: 160, y: 20}
+  m_AnchoredPosition: {x: 539.5887, y: -160.53796}
+  m_SizeDelta: {x: 146.329, y: 25.614}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1607803066
 MonoBehaviour:
@@ -4714,7 +4714,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   menuMusicSlider: {fileID: 1607803066}
   levelMusicSlider: {fileID: 846532475}
-  startingSoundVolume: 0.15
 --- !u!1 &1840593243
 GameObject:
   m_ObjectHideFlags: 0

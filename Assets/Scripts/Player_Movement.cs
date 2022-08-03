@@ -19,7 +19,5 @@ public class Player_Movement : MonoBehaviour
         {
                 float left_right_movement = Input.GetAxis("Horizontal");
                 player.velocity = new Vector2(left_right_movement * speedMultiplier * Time.deltaTime, 0f);
-
-         
         }
 }
