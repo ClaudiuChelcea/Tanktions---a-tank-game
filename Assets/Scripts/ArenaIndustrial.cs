@@ -1,22 +1,28 @@
-using System.Collections;
-using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 public class ArenaIndustrial : MonoBehaviour
 {
-        // Get audio
-        public AudioSource audioSource;
+    // Get audio
+    public AudioSource audioSource;
+    private GameObject player;
 
-	private void Update()
-	{
-		// Keep audio level up to date
-		audioSource.volume = SettingsMenu.levelMusicVolume;
-	}
+    private void Update()
+    {
+        // Keep audio level up to date
+        audioSource.volume = SettingsMenu.levelMusicVolume;
+    }
 
-	// On scene load, play music
-	private void Awake()
-	{
-		if(SettingsMenu.levelMusicVolume > 0f)
-			audioSource.Play();
-	}
+    private void Start()
+    {
+        player = GameObject.Find("Player");
+        player.GetComponent<NetworkObject>().Spawn();
+    }
+
+    // On scene load, play music
+    private void Awake()
+    {
+        if (SettingsMenu.levelMusicVolume > 0f)
+            audioSource.Play();
+    }
 }

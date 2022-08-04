@@ -1005,6 +1005,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5612737100897270351}
   - component: {fileID: 5612737100897270348}
+  - component: {fileID: 1522019365536148819}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -1026,7 +1027,7 @@ Transform:
   m_Children:
   - {fileID: 5612737100923289525}
   m_Father: {fileID: 0}
-  m_RootOrder: 2
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5612737100897270348
 MonoBehaviour:
@@ -1040,8 +1041,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d42d9be2005b4f24ca05292f43365c53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  player: {fileID: 5612737100923289522}
-  speedMultiplier: 2000
+  moveSpeed: 1.5
+  xDelta:
+    m_InternalValue: 0
+  yDelta:
+    m_InternalValue: 0
+--- !u!114 &1522019365536148819
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5612737100897270350}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 951099334
+  AlwaysReplicateAsRoot: 0
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
 --- !u!1 &5612737100923289524
 GameObject:
   m_ObjectHideFlags: 0
