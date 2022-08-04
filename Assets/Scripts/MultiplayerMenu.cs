@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using Unity.Netcode;
-using TMPro;
 
 public class MultiplayerMenu : MonoBehaviour
 {
@@ -62,11 +61,5 @@ public class MultiplayerMenu : MonoBehaviour
             else
                 Debug.Log("Unable to start client...");
         });
-
-        // STATUS TYPE CALLBACKS
-        NetworkManager.Singleton.OnClientConnectedCallback += (id) =>
-        {
-            Debug.Log($"{id} just connected...");
-        };
     }
 }

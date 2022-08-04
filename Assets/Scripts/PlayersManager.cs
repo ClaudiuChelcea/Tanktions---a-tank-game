@@ -5,6 +5,7 @@ public class PlayersManager : NetworkBehaviour
 {
     // Singleton
     public static PlayersManager Instance { get; private set; }
+
     private void Awake()
     {
         // If there is an instance, and it's not me, delete myself.
@@ -16,13 +17,24 @@ public class PlayersManager : NetworkBehaviour
         {
             Instance = this;
         }
+
+        DontDestroyOnLoad(this.gameObject);
     }
 
-    private NetworkVariable<int> playersInGame = new NetworkVariable<int>();
-
-    public int PlayersInGame
+    [ServerRpc]
+    public void NotifyConnectedServerRpc(ulong id)
     {
-        get => playersInGame.Value;
+        ArenaIndustrial arena = GameObject.Find("GameManager").GetComponent<ArenaIndustrial>();
+        // Show message
+        arena.ShowConnectedMessage(id);
+    }
+
+    [ServerRpc]
+    public void NotifyDisconnectedServerRpc(ulong id)
+    {
+        ArenaIndustrial arena = GameObject.Find("GameManager").GetComponent<ArenaIndustrial>();
+        // Show message
+        arena.ShowDisconnectedMessage(id);
     }
 
     // Start is called before the first frame update
@@ -33,7 +45,7 @@ public class PlayersManager : NetworkBehaviour
             if (NetworkManager.Singleton.IsServer)
             {
                 Debug.Log($"Client connected with {id}");
-                ++playersInGame.Value;
+                NotifyConnectedServerRpc(id);
             }
         };
 
@@ -42,7 +54,7 @@ public class PlayersManager : NetworkBehaviour
             if (NetworkManager.Singleton.IsServer)
             {
                 Debug.Log($"Client disconnected with {id}");
-                --playersInGame.Value;
+                NotifyDisconnectedServerRpc(id);
             }
         };
     }
