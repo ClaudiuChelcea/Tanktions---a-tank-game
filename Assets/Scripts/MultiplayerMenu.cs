@@ -5,6 +5,13 @@ using Unity.Netcode;
 
 public class MultiplayerMenu : MonoBehaviour
 {
+    private enum Arenas
+    {
+        ArenaIndustrial,
+        Arena2Placeholder,
+        NumberOfArenas
+    }
+
     [SerializeField]
     private Button startServerButton;
 
@@ -14,6 +21,8 @@ public class MultiplayerMenu : MonoBehaviour
     [SerializeField]
     private Button startClientButton;
 
+    [SerializeField]
+    private GameObject hostLobby;
 
     private void Awake()
     {
@@ -44,7 +53,9 @@ public class MultiplayerMenu : MonoBehaviour
             if (NetworkManager.Singleton.StartHost())
             {
                 Debug.Log("Host started...");
+                MainMenu.arenaSelected = System.Enum.GetName(typeof(Arenas), (Arenas)Random.Range(0, (float)Arenas.NumberOfArenas));
                 SceneManager.LoadScene("LoadingScreen");
+                // hostLobby.SetActive(true);
             }
             else
                 Debug.Log("Unable to start host...");
