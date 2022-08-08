@@ -12,12 +12,12 @@ EditorBuildSettings:
     path: Assets/Scenes/MainScreen.unity
     guid: 27e6ee5d266955d478bab5275c748201
   - enabled: 1
+    path: Assets/Scenes/MultiplayerMenu.unity
+    guid: 897604e6fbdb512488bbd24e6f9b0603
+  - enabled: 1
     path: Assets/Scenes/LoadingScreen.unity
     guid: 0b6c050da7331564eb508fd77f9243bf
   - enabled: 1
     path: Assets/Scenes/ArenaIndustrial.unity
     guid: 52c89632ba1d5bf4ca93f99165005e73
-  - enabled: 1
-    path: Assets/Scenes/MultiplayerMenu.unity
-    guid: 897604e6fbdb512488bbd24e6f9b0603
   m_configObjects: {}

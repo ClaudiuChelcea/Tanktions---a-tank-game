@@ -3,68 +3,21 @@ using UnityEngine;
 
 public class PlayersManager : NetworkBehaviour
 {
-    // Singleton
-    public static PlayersManager Instance { get; private set; }
-
     private void Awake()
     {
-        // If there is an instance, and it's not me, delete myself.
-        if (Instance != null && Instance != this)
-        {
-            Destroy(this);
-        }
-        else
-        {
-            Instance = this;
-        }
-
-        DontDestroyOnLoad(this.gameObject);
+        DontDestroyOnLoad(this);
     }
 
     [ServerRpc]
-    public void NotifyConnectedServerRpc(ulong id, string arenaName)
+    public void NotifyConnectedServerRpc(ulong id)
     {
-        switch (arenaName)
-        {
-            case "ArenaIndustrial":
-                {
-                    ArenaIndustrial arena = GameObject.Find("GameManager").GetComponent<ArenaIndustrial>();
-                    // Show message
-                    arena.ShowConnectedMessage(id);
-                    break;
-                }
-
-            case "Arena2Placeholder":
-                {
-                    Arena2Placeholder arena = GameObject.Find("GameManager").GetComponent<Arena2Placeholder>();
-                    // Show message
-                    arena.ShowConnectedMessage(id);
-                    break;
-                }
-        }
+        ArenaUIManager.Instance.ShowConnectedMessage(id);
     }
 
     [ServerRpc]
-    public void NotifyDisconnectedServerRpc(ulong id, string arenaName)
+    public void NotifyDisconnectedServerRpc(ulong id)
     {
-        switch (arenaName)
-        {
-            case "ArenaIndustrial":
-                {
-                    ArenaIndustrial arena = GameObject.Find("GameManager").GetComponent<ArenaIndustrial>();
-                    // Show message
-                    arena.ShowDisconnectedMessage(id);
-                    break;
-                }
-
-            case "Arena2Placeholder":
-                {
-                    Arena2Placeholder arena = GameObject.Find("GameManager").GetComponent<Arena2Placeholder>();
-                    // Show message
-                    arena.ShowDisconnectedMessage(id);
-                    break;
-                }
-        }
+        ArenaUIManager.Instance.ShowDisconnectedMessage(id);
     }
 
     // Start is called before the first frame update
@@ -75,7 +28,7 @@ public class PlayersManager : NetworkBehaviour
             if (NetworkManager.Singleton.IsServer)
             {
                 Debug.Log($"Client connected with {id}");
-                NotifyConnectedServerRpc(id, MainMenu.arenaSelected);
+                NotifyConnectedServerRpc(id);
             }
         };
 
@@ -84,7 +37,7 @@ public class PlayersManager : NetworkBehaviour
             if (NetworkManager.Singleton.IsServer)
             {
                 Debug.Log($"Client disconnected with {id}");
-                NotifyDisconnectedServerRpc(id, MainMenu.arenaSelected);
+                NotifyDisconnectedServerRpc(id);
             }
         };
     }
