@@ -9,9 +9,6 @@ public class MainMenu : MonoBehaviour
     // Play button presset
     static public bool play_button_pressed = false;
 
-    // Arena Selected
-    static public string arenaSelected = "ArenaIndustrial";
-
 
     // Set play button pressed
     public void setPlayButtonPressed()
@@ -28,7 +25,7 @@ public class MainMenu : MonoBehaviour
         // Check if play button is pressed
         if (play_button_pressed == true)
         {
-            SceneManager.LoadScene("MultiplayerMenu");
+            SceneManager.LoadScene(ScenesNames.MultiplayerMenu);
         }
     }
 

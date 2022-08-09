@@ -1,33 +1,14 @@
-using TMPro;
 using Unity.Netcode;
 using UnityEngine;
 
-public class ArenaIndustrial : MonoBehaviour
+public class ArenaIndustrial : NetworkBehaviour
 {
     // Get audio
     public AudioSource audioSource;
     private GameObject player;
     [SerializeField]
     private Transform spawnPoint;
-    [SerializeField]
-    private TMP_Text playerConnection;
 
-    public void ShowConnectedMessage(ulong id)
-    {
-        playerConnection.enabled = true;
-        playerConnection.text = "Player " + id + " connected";
-    }
-
-    public void ShowDisconnectedMessage(ulong id)
-    {
-        playerConnection.enabled = true;
-        playerConnection.text = "Player " + id + " disconnected";
-    }
-
-    public void DisableConnectedMessage()
-    {
-        playerConnection.enabled = false;
-    }
 
     private void Update()
     {
@@ -37,21 +18,23 @@ public class ArenaIndustrial : MonoBehaviour
 
     private void Start()
     {
-        if (NetworkManager.Singleton.IsHost || NetworkManager.Singleton.IsClient)
+        if (NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
             InstantiatePlayerServerRpc();
+        else
+            InstantiatePlayer();
     }
 
-    [ServerRpc]
+    private void InstantiatePlayer()
+    {
+        player = Instantiate(Resources.Load("Prefabs/Player"), spawnPoint.position, spawnPoint.rotation) as GameObject;
+        player.GetComponent<NetworkObject>().Spawn();
+        Debug.Log("Player spawned");
+    }
+
+    [ServerRpc(RequireOwnership = false)]
     private void InstantiatePlayerServerRpc()
     {
-        if (NetworkManager.Singleton.IsServer)
-        {
-            // instantiate player
-            player = Instantiate(Resources.Load("Prefabs/Player"), spawnPoint.position, spawnPoint.rotation) as GameObject;
-            player.GetComponent<NetworkObject>().Spawn();
-        }
-        else
-            Debug.Log("Cannot instantiate player from client");
+        InstantiatePlayer();
     }
 
     // On scene load, play music

@@ -3,38 +3,21 @@ using UnityEngine;
 
 public class PlayersManager : NetworkBehaviour
 {
-    // Singleton
-    public static PlayersManager Instance { get; private set; }
-
     private void Awake()
     {
-        // If there is an instance, and it's not me, delete myself.
-        if (Instance != null && Instance != this)
-        {
-            Destroy(this);
-        }
-        else
-        {
-            Instance = this;
-        }
-
-        DontDestroyOnLoad(this.gameObject);
+        DontDestroyOnLoad(this);
     }
 
     [ServerRpc]
     public void NotifyConnectedServerRpc(ulong id)
     {
-        ArenaIndustrial arena = GameObject.Find("GameManager").GetComponent<ArenaIndustrial>();
-        // Show message
-        arena.ShowConnectedMessage(id);
+        ArenaUIManager.Instance.ShowConnectedMessage(id);
     }
 
     [ServerRpc]
     public void NotifyDisconnectedServerRpc(ulong id)
     {
-        ArenaIndustrial arena = GameObject.Find("GameManager").GetComponent<ArenaIndustrial>();
-        // Show message
-        arena.ShowDisconnectedMessage(id);
+        ArenaUIManager.Instance.ShowDisconnectedMessage(id);
     }
 
     // Start is called before the first frame update

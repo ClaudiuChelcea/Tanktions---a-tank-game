@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using Unity.Netcode;
 
-public class MultiplayerMenu : MonoBehaviour
+public class MultiplayerMenu : NetworkBehaviour
 {
     [SerializeField]
     private Button startServerButton;
@@ -14,6 +14,8 @@ public class MultiplayerMenu : MonoBehaviour
     [SerializeField]
     private Button startClientButton;
 
+    [SerializeField]
+    private GameObject hostLobby;
 
     private void Awake()
     {
@@ -32,7 +34,9 @@ public class MultiplayerMenu : MonoBehaviour
             if (NetworkManager.Singleton.StartServer())
             {
                 Debug.Log("Server started...");
-                SceneManager.LoadScene("LoadingScreen");
+                // select random arena
+                GameManager.SelectRandomArena();
+                SceneManager.LoadScene(ScenesNames.LoadingScreen);
             }
             else
                 Debug.Log("Unable to start server...");
@@ -44,7 +48,9 @@ public class MultiplayerMenu : MonoBehaviour
             if (NetworkManager.Singleton.StartHost())
             {
                 Debug.Log("Host started...");
-                SceneManager.LoadScene("LoadingScreen");
+                // select random arena
+                GameManager.SelectRandomArena();
+                SceneManager.LoadScene(ScenesNames.LoadingScreen);
             }
             else
                 Debug.Log("Unable to start host...");
@@ -56,7 +62,8 @@ public class MultiplayerMenu : MonoBehaviour
             if (NetworkManager.Singleton.StartClient())
             {
                 Debug.Log("Client started...");
-                SceneManager.LoadScene("LoadingScreen");
+                // arena will be retrieved from the server when the network
+                // variable is synced, so we don't need to do anything here.
             }
             else
                 Debug.Log("Unable to start client...");
