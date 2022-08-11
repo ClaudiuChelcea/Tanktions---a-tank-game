@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
-public class Player_Movement : NetworkBehaviour
+public class PlayerMovement : NetworkBehaviour
 {
     [SerializeField]
     private float moveSpeed = 1.5f;
@@ -10,16 +10,23 @@ public class Player_Movement : NetworkBehaviour
     [SerializeField]
     private NetworkVariable<float> yDelta = new NetworkVariable<float>();
 
+    private void UpdatePosition(float xDeltaValue, float yDeltaValue)
+    {
+        transform.position = new Vector3(transform.position.x + xDeltaValue, transform.position.y + yDeltaValue,
+            transform.position.z);
+    }
+
     private void UpdateServer()
     {
-        transform.position = new Vector3(transform.position.x + xDelta.Value, transform.position.y + yDelta.Value,
-            transform.position.z);
+        UpdatePosition(xDelta.Value, yDelta.Value);
     }
 
     private void UpdateClient()
     {
         float xAxisInput = Input.GetAxis("Horizontal"); // range [-1, 1]
-        UpdateClientPositionServerRpc(xAxisInput * moveSpeed * Time.deltaTime, 0);
+        float xDeltaNew = xAxisInput * moveSpeed * Time.deltaTime;
+        UpdatePosition(xDeltaNew, 0);
+        UpdateClientPositionServerRpc(xDeltaNew, 0);
     }
 
     [ServerRpc]
@@ -37,13 +44,16 @@ public class Player_Movement : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (IsServer)
+        if (GameManager.gamePhase.Value == GameManager.GamePhase.MOVING)
         {
-            UpdateServer();
-        }
-        if (IsClient && IsOwner)
-        {
-            UpdateClient();
+            if (IsServer)
+            {
+                UpdateServer();
+            }
+            if (IsClient && IsOwner)
+            {
+                UpdateClient();
+            }
         }
     }
 }

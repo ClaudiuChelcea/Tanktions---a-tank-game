@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
-public class ArenaIndustrial : NetworkBehaviour
+public class Arena : NetworkBehaviour
 {
     // Get audio
     public AudioSource audioSource;
@@ -26,7 +26,10 @@ public class ArenaIndustrial : NetworkBehaviour
 
     private void InstantiatePlayer()
     {
-        player = Instantiate(Resources.Load("Prefabs/Player"), spawnPoint.position, spawnPoint.rotation) as GameObject;
+        if (NetworkManager.Singleton.IsHost)
+            player = Instantiate(Resources.Load("Prefabs/Player"), spawnPoint.position, spawnPoint.rotation) as GameObject;
+        else
+            player = Instantiate(Resources.Load("Prefabs/Player"), new Vector3(-spawnPoint.position.x, -spawnPoint.position.y, spawnPoint.position.z), spawnPoint.rotation) as GameObject;
         player.GetComponent<NetworkObject>().Spawn();
         Debug.Log("Player spawned");
     }

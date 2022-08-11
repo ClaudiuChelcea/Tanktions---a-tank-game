@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using Unity.Netcode;
+using TMPro;
+using System.Collections;
 
 public class MultiplayerMenu : NetworkBehaviour
 {
@@ -15,7 +17,9 @@ public class MultiplayerMenu : NetworkBehaviour
     private Button startClientButton;
 
     [SerializeField]
-    private GameObject hostLobby;
+    private TMP_Text hostLobbyText;
+    [SerializeField]
+    private TMP_Text titleText;
 
     private void Awake()
     {
@@ -28,6 +32,8 @@ public class MultiplayerMenu : NetworkBehaviour
 
     void Start()
     {
+        hostLobbyText.enabled = false;
+
         // START SERVER
         startServerButton.onClick.AddListener(() =>
         {
@@ -36,7 +42,8 @@ public class MultiplayerMenu : NetworkBehaviour
                 Debug.Log("Server started...");
                 // select random arena
                 GameManager.SelectRandomArena();
-                SceneManager.LoadScene(ScenesNames.LoadingScreen);
+                // wait for the game to start
+                StartCoroutine(WaitToLoad());
             }
             else
                 Debug.Log("Unable to start server...");
@@ -50,7 +57,8 @@ public class MultiplayerMenu : NetworkBehaviour
                 Debug.Log("Host started...");
                 // select random arena
                 GameManager.SelectRandomArena();
-                SceneManager.LoadScene(ScenesNames.LoadingScreen);
+                // wait for the game to start
+                StartCoroutine(WaitToLoad());
             }
             else
                 Debug.Log("Unable to start host...");
@@ -62,11 +70,43 @@ public class MultiplayerMenu : NetworkBehaviour
             if (NetworkManager.Singleton.StartClient())
             {
                 Debug.Log("Client started...");
-                // arena will be retrieved from the server when the network
-                // variable is synced, so we don't need to do anything here.
+                // wait for the game to start
+                StartCoroutine(WaitToLoad());
             }
             else
                 Debug.Log("Unable to start client...");
         });
+    }
+
+    IEnumerator WaitToLoad()
+    {
+        startHostButton.gameObject.SetActive(false);
+        startClientButton.gameObject.SetActive(false);
+        startServerButton.gameObject.SetActive(false);
+
+        titleText.enabled = false;
+        hostLobbyText.enabled = true;
+
+        if (NetworkManager.Singleton.IsServer)
+        {
+            hostLobbyText.text = "Waiting for player to join...";
+        }
+        else
+        {
+            hostLobbyText.text = "Waiting for server to load...";
+        }
+
+        while (!GameManager.serverLoaded.Value)
+        {
+            // wait for the game to load
+            yield return null;
+        }
+
+        hostLobbyText.enabled = false;
+
+        if (!NetworkManager.Singleton.IsServer)
+        {
+            GameManager.LoadGame();
+        }
     }
 }

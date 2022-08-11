@@ -3,21 +3,31 @@ using UnityEngine;
 
 public class PlayersManager : NetworkBehaviour
 {
+    // list of players ids (max 2 players)
+    public static ulong[] playersIds = new ulong[2];
+    public static int nPlayers = 0;
+
     private void Awake()
     {
         DontDestroyOnLoad(this);
     }
 
-    [ServerRpc]
-    public void NotifyConnectedServerRpc(ulong id)
+    public void NotifyConnected(ulong id)
     {
-        ArenaUIManager.Instance.ShowConnectedMessage(id);
+        Debug.Log("[Server] Player " + id + " connected");
+        if (ArenaUIManager.Instance != null)
+        {
+            ArenaUIManager.Instance.ShowConnectedMessage(id);
+        }
     }
 
-    [ServerRpc]
-    public void NotifyDisconnectedServerRpc(ulong id)
+    public void NotifyDisconnected(ulong id)
     {
-        ArenaUIManager.Instance.ShowDisconnectedMessage(id);
+        Debug.Log($"Client disconnected with {id}");
+        if (ArenaUIManager.Instance != null)
+        {
+            ArenaUIManager.Instance.ShowDisconnectedMessage(id);
+        }
     }
 
     // Start is called before the first frame update
@@ -27,8 +37,24 @@ public class PlayersManager : NetworkBehaviour
         {
             if (NetworkManager.Singleton.IsServer)
             {
-                Debug.Log($"Client connected with {id}");
-                NotifyConnectedServerRpc(id);
+                if (nPlayers < 2)
+                {
+                    // accept connection
+                    playersIds[nPlayers++] = id;
+                    NotifyConnected(id);
+
+                    // start game if 2 players connected
+                    if (nPlayers == 2)
+                    {
+                        GameManager.LoadGame();
+                    }
+                }
+                else
+                {
+                    // refuse connection
+                    NetworkManager.Singleton.DisconnectClient(id);
+                    Debug.Log("[Server] Too many players");
+                }
             }
         };
 
@@ -36,8 +62,9 @@ public class PlayersManager : NetworkBehaviour
         {
             if (NetworkManager.Singleton.IsServer)
             {
-                Debug.Log($"Client disconnected with {id}");
-                NotifyDisconnectedServerRpc(id);
+                --nPlayers;
+                NotifyDisconnected(id);
+                GameManager.StopGameDisconnected();
             }
         };
     }

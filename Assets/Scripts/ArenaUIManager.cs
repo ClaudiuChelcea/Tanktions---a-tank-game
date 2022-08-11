@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 
@@ -5,6 +6,19 @@ public class ArenaUIManager : MonoBehaviour
 {
     // Singleton
     public static ArenaUIManager Instance { get; private set; }
+
+    [SerializeField]
+    private TMP_Text playersConnection;
+    [SerializeField]
+    private TMP_Text timeLeft;
+    [SerializeField]
+    private TMP_Text gamePhase;
+    [SerializeField]
+    private TMP_Text turn;
+    [SerializeField]
+    private TMP_Text winner;
+    [SerializeField]
+    private TMP_Text interrupted;
 
     private void Awake()
     {
@@ -22,10 +36,12 @@ public class ArenaUIManager : MonoBehaviour
     private void Start()
     {
         playersConnection.enabled = false;
+        timeLeft.enabled = false;
+        gamePhase.enabled = false;
+        winner.enabled = false;
+        interrupted.enabled = false;
+        turn.enabled = false;
     }
-
-    [SerializeField]
-    private TMP_Text playersConnection;
 
     public void ShowConnectedMessage(ulong id)
     {
@@ -39,8 +55,49 @@ public class ArenaUIManager : MonoBehaviour
         playersConnection.text = "Player " + id + " disconnected";
     }
 
-    public void DisableConnectedMessage()
+    public void ShowTimeLeft(float time)
+    {
+        timeLeft.enabled = true;
+        timeLeft.text = "Time left: " + time;
+    }
+
+    public void ShowGamePhase(GameManager.GamePhase phase)
+    {
+        gamePhase.enabled = true;
+        gamePhase.text = "Game phase: " + phase;
+    }
+
+    public void ShowWaiting()
+    {
+        turn.enabled = true;
+        turn.text = "Waiting for opponent to join...";
+    }
+
+    public void ShowTurn(ulong id)
+    {
+        turn.enabled = true;
+        turn.text = "Turn: Player " + id;
+    }
+
+    public void ShowWinner(ulong id)
+    {
+        winner.enabled = true;
+        winner.text = "Player " + id + " won!";
+    }
+
+    public void ShowInterrupted()
+    {
+        interrupted.enabled = true;
+        interrupted.text = "The opponent disconnected...";
+    }
+
+    public void HideText()
     {
         playersConnection.enabled = false;
+        timeLeft.enabled = false;
+        gamePhase.enabled = false;
+        winner.enabled = false;
+        interrupted.enabled = false;
+        turn.enabled = false;
     }
 }
