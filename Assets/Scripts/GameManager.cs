@@ -176,23 +176,24 @@ public class GameManager : NetworkBehaviour
                     }
                 }
             }
-        }
 
-        if (gamePhase.Value == GamePhase.ENDED)
-        {
-            ArenaUIManager.Instance.HideText();
-            ArenaUIManager.Instance.ShowWinner(victoriousPlayerId.Value);
-        }
-        else if (gamePhase.Value == GamePhase.INTERRUPTED)
-        {
-            ArenaUIManager.Instance.HideText();
-            ArenaUIManager.Instance.ShowInterrupted();
-        }
-        else
-        {
-            ArenaUIManager.Instance.ShowTimeLeft(timeLeft.Value);
-            ArenaUIManager.Instance.ShowGamePhase(gamePhase.Value);
-            ArenaUIManager.Instance.ShowTurn(playerTurnId.Value);
+
+            if (gamePhase.Value == GamePhase.ENDED)
+            {
+                ArenaUIManager.Instance.HideText();
+                ArenaUIManager.Instance.ShowWinner(victoriousPlayerId.Value);
+            }
+            else if (gamePhase.Value == GamePhase.INTERRUPTED)
+            {
+                ArenaUIManager.Instance.HideText();
+                ArenaUIManager.Instance.ShowInterrupted();
+            }
+            else
+            {
+                ArenaUIManager.Instance.ShowTimeLeft(timeLeft.Value);
+                ArenaUIManager.Instance.ShowGamePhase(gamePhase.Value);
+                ArenaUIManager.Instance.ShowTurn(playerTurnId.Value);
+            }
         }
     }
 

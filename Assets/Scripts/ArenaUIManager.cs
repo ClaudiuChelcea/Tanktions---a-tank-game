@@ -17,8 +17,6 @@ public class ArenaUIManager : MonoBehaviour
     private TMP_Text turn;
     [SerializeField]
     private TMP_Text winner;
-    [SerializeField]
-    private TMP_Text interrupted;
 
     private void Awake()
     {
@@ -39,7 +37,6 @@ public class ArenaUIManager : MonoBehaviour
         timeLeft.enabled = false;
         gamePhase.enabled = false;
         winner.enabled = false;
-        interrupted.enabled = false;
         turn.enabled = false;
     }
 
@@ -87,8 +84,8 @@ public class ArenaUIManager : MonoBehaviour
 
     public void ShowInterrupted()
     {
-        interrupted.enabled = true;
-        interrupted.text = "The opponent disconnected...";
+        winner.enabled = true;
+        winner.text = "The opponent disconnected...";
     }
 
     public void HideText()
@@ -97,7 +94,6 @@ public class ArenaUIManager : MonoBehaviour
         timeLeft.enabled = false;
         gamePhase.enabled = false;
         winner.enabled = false;
-        interrupted.enabled = false;
         turn.enabled = false;
     }
 }
