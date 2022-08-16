@@ -10,6 +10,31 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField]
     private NetworkVariable<float> yDelta = new NetworkVariable<float>();
 
+
+    // Start is called before the first frame update
+    void Start()
+    {
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        // manage movement phase
+        if (GameManager.Instance.gamePhase.Value == GameManager.GamePhase.MOVING)
+        {
+            if (IsServer)
+            {
+                UpdateServer();
+            }
+            if (IsClient && IsOwner)
+            {
+                UpdateClient();
+            }
+        }
+
+        // TODO: manage aiming phase
+    }
+
     private void UpdatePosition(float xDeltaValue, float yDeltaValue)
     {
         transform.position = new Vector3(transform.position.x + xDeltaValue, transform.position.y + yDeltaValue,
@@ -34,26 +59,5 @@ public class PlayerMovement : NetworkBehaviour
     {
         xDelta.Value = xDeltaNew;
         yDelta.Value = yDeltaNew;
-    }
-
-    // Start is called before the first frame update
-    void Start()
-    {
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        if (GameManager.gamePhase.Value == GameManager.GamePhase.MOVING)
-        {
-            if (IsServer)
-            {
-                UpdateServer();
-            }
-            if (IsClient && IsOwner)
-            {
-                UpdateClient();
-            }
-        }
     }
 }

@@ -26,45 +26,44 @@ public class MultiplayerMenu : NetworkBehaviour
         Cursor.visible = true;
     }
 
-    void Update()
-    {
-    }
 
     void Start()
     {
         hostLobbyText.enabled = false;
 
-        // START SERVER
+        // add listeners for the buttons
+
+        ///  SERVER
         startServerButton.onClick.AddListener(() =>
         {
             if (NetworkManager.Singleton.StartServer())
             {
                 Debug.Log("Server started...");
                 // select random arena
-                GameManager.SelectRandomArena();
+                GameManager.Instance.SelectRandomArenaServer();
                 // wait for the game to start
-                StartCoroutine(WaitToLoad());
+                StartCoroutine(WaitToConnect());
             }
             else
                 Debug.Log("Unable to start server...");
         });
 
-        // START HOST
+        ///  HOST
         startHostButton.onClick.AddListener(() =>
         {
             if (NetworkManager.Singleton.StartHost())
             {
                 Debug.Log("Host started...");
                 // select random arena
-                GameManager.SelectRandomArena();
+                GameManager.Instance.SelectRandomArenaServer();
                 // wait for the game to start
-                StartCoroutine(WaitToLoad());
+                StartCoroutine(WaitToConnect());
             }
             else
                 Debug.Log("Unable to start host...");
         });
 
-        // START CLIENT
+        ///  CLIENT
         startClientButton.onClick.AddListener(() =>
         {
             if (NetworkManager.Singleton.StartClient())
@@ -78,7 +77,16 @@ public class MultiplayerMenu : NetworkBehaviour
         });
     }
 
-    IEnumerator WaitToLoad()
+    void Update()
+    {
+    }
+
+    /// <summary>
+    /// Waits for the client to connect to the server.
+    /// Should be called only on the server.
+    /// </summary>
+    /// <returns>IEnumerator for coroutine</returns>
+    IEnumerator WaitToConnect()
     {
         startHostButton.gameObject.SetActive(false);
         startClientButton.gameObject.SetActive(false);
@@ -93,10 +101,41 @@ public class MultiplayerMenu : NetworkBehaviour
         }
         else
         {
+            Debug.Log("How did we get here?");
+        }
+
+        while (PlayersManager.nPlayers < 2)
+        {
+            yield return null;
+        }
+
+        GameManager.Instance.LoadGame();
+    }
+
+    /// <summary>
+    /// Waits for the server to load the arena.
+    /// Should only be called from the client.
+    /// </summary>
+    /// <returns>IEnumerator for coroutine</returns>
+    IEnumerator WaitToLoad()
+    {
+        startHostButton.gameObject.SetActive(false);
+        startClientButton.gameObject.SetActive(false);
+        startServerButton.gameObject.SetActive(false);
+
+        titleText.enabled = false;
+        hostLobbyText.enabled = true;
+
+        if (NetworkManager.Singleton.IsServer)
+        {
+            Debug.Log("How did we end up here?");
+        }
+        else
+        {
             hostLobbyText.text = "Waiting for server to load...";
         }
 
-        while (!GameManager.serverLoaded.Value)
+        while (!GameManager.Instance.serverLoaded.Value)
         {
             // wait for the game to load
             yield return null;
@@ -104,9 +143,6 @@ public class MultiplayerMenu : NetworkBehaviour
 
         hostLobbyText.enabled = false;
 
-        if (!NetworkManager.Singleton.IsServer)
-        {
-            GameManager.LoadGame();
-        }
+        GameManager.Instance.LoadGame();
     }
 }

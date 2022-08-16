@@ -31,7 +31,7 @@ public class LoadingScreen : MonoBehaviour
     {
         // For now only ArenaIndustrial
         // In the future, the play button should select a random map index, and that index is public in MainMenu, being sent here to load
-        loadingOperation = SceneManager.LoadSceneAsync(GameManager.arenaName.Value.ToString());
+        loadingOperation = SceneManager.LoadSceneAsync(GameManager.Instance.arenaName.Value.ToString());
 
         // Stop it so we can put a minimum loading time
         loadingOperation.allowSceneActivation = false;

@@ -5,10 +5,19 @@ public class Arena : NetworkBehaviour
 {
     // Get audio
     public AudioSource audioSource;
-    private GameObject player;
+    private GameObject playerHost;
+    private GameObject playerClient;
     [SerializeField]
     private Transform spawnPoint;
+    public static Arena Instance;
 
+
+    void Awake()
+    {
+        Instance = this;
+        if (SettingsMenu.levelMusicVolume > 0f)
+            audioSource.Play();
+    }
 
     private void Update()
     {
@@ -18,32 +27,28 @@ public class Arena : NetworkBehaviour
 
     private void Start()
     {
-        if (NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
-            InstantiatePlayerServerRpc();
-        else
+    }
+
+    public void StartGame()
+    {
+        if (NetworkManager.Singleton.IsServer)
+        {
             InstantiatePlayer();
-    }
-
-    private void InstantiatePlayer()
-    {
-        if (NetworkManager.Singleton.IsHost)
-            player = Instantiate(Resources.Load("Prefabs/Player"), spawnPoint.position, spawnPoint.rotation) as GameObject;
+        }
         else
-            player = Instantiate(Resources.Load("Prefabs/Player"), new Vector3(-spawnPoint.position.x, -spawnPoint.position.y, spawnPoint.position.z), spawnPoint.rotation) as GameObject;
-        player.GetComponent<NetworkObject>().Spawn();
-        Debug.Log("Player spawned");
+        {
+            Debug.Log("Client should not be starting game");
+        }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void InstantiatePlayerServerRpc()
+    public void InstantiatePlayer()
     {
-        InstantiatePlayer();
-    }
+        playerHost = Instantiate(Resources.Load("Prefabs/Player"), spawnPoint.position, spawnPoint.rotation) as GameObject;
+        playerHost.GetComponent<NetworkObject>().SpawnWithOwnership(PlayersManager.playersIds[0]);
+        Debug.Log("Host player spawned");
 
-    // On scene load, play music
-    private void Awake()
-    {
-        if (SettingsMenu.levelMusicVolume > 0f)
-            audioSource.Play();
+        playerClient = Instantiate(Resources.Load("Prefabs/Player"), new Vector3(-spawnPoint.position.x, -spawnPoint.position.y, spawnPoint.position.z), Quaternion.Euler(0.0f, 0.0f, 180.0f)) as GameObject;
+        playerClient.GetComponent<NetworkObject>().SpawnWithOwnership(PlayersManager.playersIds[1]);
+        Debug.Log("Client player spawned");
     }
 }

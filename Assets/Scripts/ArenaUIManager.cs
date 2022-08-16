@@ -66,8 +66,8 @@ public class ArenaUIManager : MonoBehaviour
 
     public void ShowWaiting()
     {
-        turn.enabled = true;
-        turn.text = "Waiting for opponent to join...";
+        winner.enabled = true;
+        winner.text = "Waiting for opponent to join...";
     }
 
     public void ShowTurn(ulong id)

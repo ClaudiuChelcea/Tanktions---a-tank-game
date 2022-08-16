@@ -3,36 +3,20 @@ using UnityEngine;
 
 public class PlayersManager : NetworkBehaviour
 {
-    // list of players ids (max 2 players)
-    public static ulong[] playersIds = new ulong[2];
-    public static int nPlayers = 0;
+
+    public static ulong[] playersIds = new ulong[2]; // list of players ids (max 2 players)
+    public static int nPlayers = 0; // number of players
 
     private void Awake()
     {
-        DontDestroyOnLoad(this);
-    }
-
-    public void NotifyConnected(ulong id)
-    {
-        Debug.Log("[Server] Player " + id + " connected");
-        if (ArenaUIManager.Instance != null)
-        {
-            ArenaUIManager.Instance.ShowConnectedMessage(id);
-        }
-    }
-
-    public void NotifyDisconnected(ulong id)
-    {
-        Debug.Log($"Client disconnected with {id}");
-        if (ArenaUIManager.Instance != null)
-        {
-            ArenaUIManager.Instance.ShowDisconnectedMessage(id);
-        }
+        DontDestroyOnLoad(this); // don't destroy this object when loading a new scene
     }
 
     // Start is called before the first frame update
     void Start()
     {
+        // add callbacks when a player joins or leaves the game
+
         NetworkManager.Singleton.OnClientConnectedCallback += (id) =>
         {
             if (NetworkManager.Singleton.IsServer)
@@ -42,12 +26,6 @@ public class PlayersManager : NetworkBehaviour
                     // accept connection
                     playersIds[nPlayers++] = id;
                     NotifyConnected(id);
-
-                    // start game if 2 players connected
-                    if (nPlayers == 2)
-                    {
-                        GameManager.LoadGame();
-                    }
                 }
                 else
                 {
@@ -62,9 +40,10 @@ public class PlayersManager : NetworkBehaviour
         {
             if (NetworkManager.Singleton.IsServer)
             {
+                // disconnect client and stop the game
                 --nPlayers;
                 NotifyDisconnected(id);
-                GameManager.StopGameDisconnected();
+                GameManager.Instance.StopGameDisconnectedServer();
             }
         };
     }
@@ -73,5 +52,29 @@ public class PlayersManager : NetworkBehaviour
     void Update()
     {
 
+    }
+
+    /**
+     * Notify the server that a player has connected
+     */
+    public void NotifyConnected(ulong id)
+    {
+        Debug.Log("[Server] Player " + id + " connected");
+        if (ArenaUIManager.Instance != null)
+        {
+            ArenaUIManager.Instance.ShowConnectedMessage(id);
+        }
+    }
+
+    /**
+     * Notify the server that a player has disconnected
+     */
+    public void NotifyDisconnected(ulong id)
+    {
+        Debug.Log($"Client disconnected with {id}");
+        if (ArenaUIManager.Instance != null)
+        {
+            ArenaUIManager.Instance.ShowDisconnectedMessage(id);
+        }
     }
 }
