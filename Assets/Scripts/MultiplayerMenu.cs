@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 using Unity.Netcode;
 using TMPro;
 using System.Collections;
@@ -104,7 +103,7 @@ public class MultiplayerMenu : NetworkBehaviour
             Debug.Log("How did we get here?");
         }
 
-        while (PlayersManager.nPlayers < 2)
+        while (PlayersManager.Instance.nPlayers < 2)
         {
             yield return null;
         }

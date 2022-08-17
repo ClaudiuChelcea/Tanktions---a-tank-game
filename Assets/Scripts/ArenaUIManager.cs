@@ -1,4 +1,3 @@
-using System;
 using TMPro;
 using UnityEngine;
 
@@ -20,24 +19,12 @@ public class ArenaUIManager : MonoBehaviour
 
     private void Awake()
     {
-        // If there is an instance, and it's not me, delete myself.
-        if (Instance != null && Instance != this)
-        {
-            Destroy(this);
-        }
-        else
-        {
-            Instance = this;
-        }
+        Instance = this;
     }
 
     private void Start()
     {
-        playersConnection.enabled = false;
-        timeLeft.enabled = false;
-        gamePhase.enabled = false;
-        winner.enabled = false;
-        turn.enabled = false;
+        HideText();
     }
 
     public void ShowConnectedMessage(ulong id)
@@ -55,7 +42,7 @@ public class ArenaUIManager : MonoBehaviour
     public void ShowTimeLeft(float time)
     {
         timeLeft.enabled = true;
-        timeLeft.text = "Time left: " + time;
+        timeLeft.text = "Time left: " + time.ToString("00.00");
     }
 
     public void ShowGamePhase(GameManager.GamePhase phase)
@@ -95,5 +82,10 @@ public class ArenaUIManager : MonoBehaviour
         gamePhase.enabled = false;
         winner.enabled = false;
         turn.enabled = false;
+    }
+
+    public void OnDestroy()
+    {
+        Instance = null;
     }
 }

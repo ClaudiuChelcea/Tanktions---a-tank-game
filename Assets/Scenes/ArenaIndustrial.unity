@@ -7886,7 +7886,7 @@ AudioSource:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1184823507}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 8300000, guid: 914f3e0a69e69854785efbc61c3f1e55, type: 3}
@@ -7987,6 +7987,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0644ba748f1283441beede991b5380c1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  arenaCamera: {fileID: 444394619}
   audioSource: {fileID: 1184823510}
   spawnPoint: {fileID: 827346639}
 --- !u!114 &1184823512

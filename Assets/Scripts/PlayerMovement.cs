@@ -6,9 +6,10 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField]
     private float moveSpeed = 1.5f;
     [SerializeField]
-    private NetworkVariable<float> xDelta = new NetworkVariable<float>();
+    private Transform turretPivot;
     [SerializeField]
-    private NetworkVariable<float> yDelta = new NetworkVariable<float>();
+    private float aimSpeed = 100.0f;
+    private ulong playerId;
 
 
     // Start is called before the first frame update
@@ -19,45 +20,45 @@ public class PlayerMovement : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        // manage movement phase
-        if (GameManager.Instance.gamePhase.Value == GameManager.GamePhase.MOVING)
+        if (IsClient && IsOwner && playerId == PlayersManager.Instance.playersIds[GameManager.Instance.playerTurnIdx.Value])
         {
-            if (IsServer)
+            // manage movement phase
+            if (GameManager.Instance.gamePhase.Value == GameManager.GamePhase.MOVING)
             {
-                UpdateServer();
+                MoveClient();
             }
-            if (IsClient && IsOwner)
+
+            // manage aiming phase
+            if (GameManager.Instance.gamePhase.Value == GameManager.GamePhase.AIMING)
             {
-                UpdateClient();
+                AimClient();
             }
         }
-
-        // TODO: manage aiming phase
     }
 
-    private void UpdatePosition(float xDeltaValue, float yDeltaValue)
-    {
-        transform.position = new Vector3(transform.position.x + xDeltaValue, transform.position.y + yDeltaValue,
-            transform.position.z);
-    }
-
-    private void UpdateServer()
-    {
-        UpdatePosition(xDelta.Value, yDelta.Value);
-    }
-
-    private void UpdateClient()
+    private void MoveClient()
     {
         float xAxisInput = Input.GetAxis("Horizontal"); // range [-1, 1]
-        float xDeltaNew = xAxisInput * moveSpeed * Time.deltaTime;
-        UpdatePosition(xDeltaNew, 0);
-        UpdateClientPositionServerRpc(xDeltaNew, 0);
+
+        if (!NetworkManager.Singleton.IsServer)
+        {
+            xAxisInput = -xAxisInput;
+        }
+
+        float xDelta = xAxisInput * moveSpeed * Time.deltaTime;
+        transform.Translate(xDelta, 0, 0);
     }
 
-    [ServerRpc]
-    private void UpdateClientPositionServerRpc(float xDeltaNew, float yDeltaNew)
+    private void AimClient()
     {
-        xDelta.Value = xDeltaNew;
-        yDelta.Value = yDeltaNew;
+        float xAxisInput = Input.GetAxis("Horizontal"); // range [-1, 1]
+
+        if (!NetworkManager.Singleton.IsServer)
+        {
+            xAxisInput = -xAxisInput;
+        }
+
+        float angleDelta = xAxisInput * aimSpeed * Time.deltaTime;
+        turretPivot.Rotate(0, 0, angleDelta);
     }
 }

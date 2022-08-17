@@ -6,14 +6,15 @@ using UnityEngine.SceneManagement;
 public class GameManager : NetworkBehaviour
 {
     public NetworkVariable<FixedString32Bytes> arenaName = new NetworkVariable<FixedString32Bytes>("Not selected");
-    public NetworkVariable<ulong> playerTurnId = new NetworkVariable<ulong>();
+    public NetworkVariable<int> playerTurnIdx = new NetworkVariable<int>();
     public NetworkVariable<ulong> victoriousPlayerId = new NetworkVariable<ulong>();
     public NetworkVariable<GamePhase> gamePhase = new NetworkVariable<GamePhase>();
     public NetworkVariable<bool> hasStarted = new NetworkVariable<bool>();
     public NetworkVariable<float> timeLeft = new NetworkVariable<float>();
     public NetworkVariable<bool> serverLoaded = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> clientLoaded = new NetworkVariable<bool>(false);
-    public static float timePerTurn = 60.0f;
+    private float timePerMove = 10.0f;
+    private float timePerAim = 10.0f;
 
     public enum GamePhase
     {
@@ -73,65 +74,67 @@ public class GameManager : NetworkBehaviour
         {
             if (NetworkManager.Singleton.IsServer)
             {
-                if (gamePhase.Value == GamePhase.WAITING)
-                {
-                    ArenaUIManager.Instance.ShowWaiting();
-                }
-                else if (gamePhase.Value == GamePhase.MOVING || gamePhase.Value == GamePhase.AIMING)
+                if (gamePhase.Value == GamePhase.MOVING)
                 {
                     if (timeLeft.Value <= 0.0f)
                     {
-                        // end of turn
-                        timeLeft.Value = timePerTurn;
-                        if (playerTurnId.Value == PlayersManager.playersIds[0])
-                        {
-                            playerTurnId.Value = PlayersManager.playersIds[1];
-                        }
-                        else
-                        {
-                            playerTurnId.Value = PlayersManager.playersIds[0];
-                            // also change the phase
-                            if (gamePhase.Value == GamePhase.MOVING)
-                            {
-                                gamePhase.Value = GamePhase.AIMING;
-                            }
-                            else
-                            {
-                                gamePhase.Value = GamePhase.MOVING;
-                            }
-                        }
+                        gamePhase.Value = GamePhase.AIMING;
+                        timeLeft.Value = timePerAim;
                     }
                     else
                     {
                         timeLeft.Value -= Time.deltaTime;
                     }
                 }
+                else if (gamePhase.Value == GamePhase.AIMING)
+                {
+                    if (timeLeft.Value <= 0.0f)
+                    {
+                        gamePhase.Value = GamePhase.SHOOTING;
+                        timeLeft.Value = 0.0f;
+                    }
+                    else
+                    {
+                        timeLeft.Value -= Time.deltaTime;
+                    }
+                }
+                else if (gamePhase.Value == GamePhase.SHOOTING)
+                {
+                    // trigger next game phase after bullet despawned
+
+                    // next turn
+                    playerTurnIdx.Value = (playerTurnIdx.Value + 1) % PlayersManager.Instance.nPlayers;
+                    gamePhase.Value = GamePhase.MOVING;
+                    timeLeft.Value = timePerMove;
+                }
             }
 
-
-            if (gamePhase.Value == GamePhase.ENDED)
-            {
-                ArenaUIManager.Instance.HideText();
-                ArenaUIManager.Instance.ShowWinner(victoriousPlayerId.Value);
-            }
-            else if (gamePhase.Value == GamePhase.INTERRUPTED)
+            if (gamePhase.Value == GamePhase.INTERRUPTED)
             {
                 ArenaUIManager.Instance.HideText();
                 ArenaUIManager.Instance.ShowInterrupted();
+            }
+            else if (gamePhase.Value == GamePhase.ENDED)
+            {
+                ArenaUIManager.Instance.ShowWinner(victoriousPlayerId.Value);
             }
             else
             {
                 ArenaUIManager.Instance.ShowTimeLeft(timeLeft.Value);
                 ArenaUIManager.Instance.ShowGamePhase(gamePhase.Value);
-                ArenaUIManager.Instance.ShowTurn(playerTurnId.Value);
+                ArenaUIManager.Instance.ShowTurn(PlayersManager.Instance.playersIds[playerTurnIdx.Value]);
             }
-        }
 
-        if (gamePhase.Value == GamePhase.WAITING)
+        }
+        else if (gamePhase.Value == GamePhase.WAITING && ArenaUIManager.Instance != null)
         {
-            ArenaUIManager.Instance.HideText();
             ArenaUIManager.Instance.ShowWaiting();
         }
+    }
+
+    public string GetArenaName()
+    {
+        return arenaName.Value.ToString();
     }
 
     public void OnGamePhaseChanged(GamePhase value, GamePhase newValue)
@@ -208,14 +211,13 @@ public class GameManager : NetworkBehaviour
     {
         if (NetworkManager.Singleton.IsServer)
         {
-            Debug.Log("[Server] Starting game...");
-            StartGameClientRpc();
             gamePhase.Value = GamePhase.MOVING;
+            StartGameClientRpc();
+            ArenaUIManager.Instance.HideText();
             hasStarted.Value = true;
-            timeLeft.Value = timePerTurn;
-            playerTurnId.Value = PlayersManager.playersIds[0];
+            timeLeft.Value = timePerMove;
+            playerTurnIdx.Value = 0;
             victoriousPlayerId.Value = ulong.MaxValue;
-            Arena.Instance.StartGame();
         }
         else
         {
@@ -227,17 +229,56 @@ public class GameManager : NetworkBehaviour
     public void StartGameClientRpc()
     {
         Debug.Log("[Client] Starting game...");
+        Arena.Instance.StartGame();
+        ArenaUIManager.Instance.HideText();
     }
 
-    public void StopGameDisconnectedServer()
+    [ServerRpc]
+    public void StopGameServerRpc(bool interrupted)
     {
-        Debug.Log("[Server] Game stopped because of disconnection");
-        gamePhase.Value = GamePhase.INTERRUPTED;
+        if (interrupted)
+        {
+            gamePhase.Value = GamePhase.INTERRUPTED;
+            Debug.Log("Opponent disconnected... Going back to menu...");
+        }
+        else
+        {
+            gamePhase.Value = GamePhase.ENDED;
+            victoriousPlayerId.Value = PlayersManager.Instance.playersIds[playerTurnIdx.Value];
+            Debug.Log("Game ended... Player " + victoriousPlayerId.Value + " won!");
+        }
+
+        Invoke("BackToMenu", 3.0f);
+    }
+
+    public void BackToMenu()
+    {
+        Destroy(gameObject);
+        Destroy(PlayersManager.Instance.gameObject);
+        Destroy(NetworkManager.Singleton.gameObject);
+    }
+
+    public void StopGameClientServerShutdown()
+    {
+        Debug.Log("[Client] Server closed... Going back to menu...");
+        ArenaUIManager.Instance.ShowInterrupted();
+        Invoke("BackToMenu", 3.0f);
+    }
+
+    public bool HasEnded()
+    {
+        return gamePhase.Value == GamePhase.ENDED || gamePhase.Value == GamePhase.INTERRUPTED;
     }
 
     public void SelectRandomArenaServer()
     {
         arenaName.Value = ScenesNames.Arenas[UnityEngine.Random.Range(0, ScenesNames.Arenas.Length)];
         Debug.Log("[Server] Arena selected: " + arenaName.Value);
+    }
+
+    public override void OnDestroy()
+    {
+        SceneManager.LoadScene(ScenesNames.MainScreen);
+        Instance = null;
     }
 }
