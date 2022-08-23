@@ -4,48 +4,30 @@ using Unity.Netcode;
 using TMPro;
 using System.Collections;
 
+/// <summary>
+/// The multiplayer menu.
+/// </summary>
 public class MultiplayerMenu : NetworkBehaviour
 {
-    [SerializeField]
-    private Button startServerButton;
 
     [SerializeField]
     private Button startHostButton;
 
     [SerializeField]
     private Button startClientButton;
+    [SerializeField]
+    private Button backButton;
 
     [SerializeField]
     private TMP_Text hostLobbyText;
     [SerializeField]
     private TMP_Text titleText;
 
-    private void Awake()
-    {
-        Cursor.visible = true;
-    }
-
-
     void Start()
     {
         hostLobbyText.enabled = false;
 
         // add listeners for the buttons
-
-        ///  SERVER
-        startServerButton.onClick.AddListener(() =>
-        {
-            if (NetworkManager.Singleton.StartServer())
-            {
-                Debug.Log("Server started...");
-                // select random arena
-                GameManager.Instance.SelectRandomArenaServer();
-                // wait for the game to start
-                StartCoroutine(WaitToConnect());
-            }
-            else
-                Debug.Log("Unable to start server...");
-        });
 
         ///  HOST
         startHostButton.onClick.AddListener(() =>
@@ -74,6 +56,14 @@ public class MultiplayerMenu : NetworkBehaviour
             else
                 Debug.Log("Unable to start client...");
         });
+
+        /// BACK TO MENU
+        backButton.onClick.AddListener(() =>
+        {
+            StopAllCoroutines();
+            GameManager.Instance.BackToMenu();
+            Debug.Log("Back to Main Menu");
+        });
     }
 
     void Update()
@@ -81,7 +71,7 @@ public class MultiplayerMenu : NetworkBehaviour
     }
 
     /// <summary>
-    /// Waits for the client to connect to the server.
+    /// Waits for the client to connect to the server, then loads the arena.
     /// Should be called only on the server.
     /// </summary>
     /// <returns>IEnumerator for coroutine</returns>
@@ -89,7 +79,6 @@ public class MultiplayerMenu : NetworkBehaviour
     {
         startHostButton.gameObject.SetActive(false);
         startClientButton.gameObject.SetActive(false);
-        startServerButton.gameObject.SetActive(false);
 
         titleText.enabled = false;
         hostLobbyText.enabled = true;
@@ -103,16 +92,17 @@ public class MultiplayerMenu : NetworkBehaviour
             Debug.Log("How did we get here?");
         }
 
-        while (PlayersManager.Instance.nPlayers < 2)
+        while (PlayersManager.Instance.nPlayersConnected.Value < PlayersManager.MAX_PLAYERS)
         {
             yield return null;
         }
 
+        // load the arena after client connected
         GameManager.Instance.LoadGame();
     }
 
     /// <summary>
-    /// Waits for the server to load the arena.
+    /// Waits for the server to load the arena, then loads the arena.
     /// Should only be called from the client.
     /// </summary>
     /// <returns>IEnumerator for coroutine</returns>
@@ -120,7 +110,6 @@ public class MultiplayerMenu : NetworkBehaviour
     {
         startHostButton.gameObject.SetActive(false);
         startClientButton.gameObject.SetActive(false);
-        startServerButton.gameObject.SetActive(false);
 
         titleText.enabled = false;
         hostLobbyText.enabled = true;
@@ -142,6 +131,7 @@ public class MultiplayerMenu : NetworkBehaviour
 
         hostLobbyText.enabled = false;
 
+        // loads the arena after server finished loading
         GameManager.Instance.LoadGame();
     }
 }

@@ -3,18 +3,23 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// Manages the game state.
+/// </summary>
 public class GameManager : NetworkBehaviour
 {
     public NetworkVariable<FixedString32Bytes> arenaName = new NetworkVariable<FixedString32Bytes>("Not selected");
-    public NetworkVariable<int> playerTurnIdx = new NetworkVariable<int>();
+    public NetworkVariable<ulong> playerTurnId = new NetworkVariable<ulong>();
     public NetworkVariable<ulong> victoriousPlayerId = new NetworkVariable<ulong>();
     public NetworkVariable<GamePhase> gamePhase = new NetworkVariable<GamePhase>();
-    public NetworkVariable<bool> hasStarted = new NetworkVariable<bool>();
-    public NetworkVariable<float> timeLeft = new NetworkVariable<float>();
+    public NetworkVariable<bool> hasStarted = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> serverLoaded = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> clientLoaded = new NetworkVariable<bool>(false);
-    private float timePerMove = 10.0f;
-    private float timePerAim = 10.0f;
+    public NetworkVariable<float> timeLeft = new NetworkVariable<float>();
+    private NetworkVariable<float> timePerMove = new NetworkVariable<float>(10.0f);
+    private NetworkVariable<float> timePerAim = new NetworkVariable<float>(10.0f);
+    private NetworkVariable<float> timePerShot = new NetworkVariable<float>(10.0f);
+    private NetworkVariable<bool> shootingSuccessful = new NetworkVariable<bool>(false);
 
     public enum GamePhase
     {
@@ -29,6 +34,7 @@ public class GameManager : NetworkBehaviour
     }
 
     public static GameManager Instance;
+
 
     private void Awake()
     {
@@ -50,11 +56,11 @@ public class GameManager : NetworkBehaviour
     {
         if (NetworkManager.Singleton.IsServer)
         {
-            gamePhase.Value = GamePhase.LOBBY;
+            gamePhase.Value = GamePhase.LOBBY;  // set initial game phase
         }
         else
         {
-            gamePhase.OnValueChanged += OnGamePhaseChanged;
+            gamePhase.OnValueChanged += OnGamePhaseChanged; // add client listener
         }
     }
 
@@ -62,84 +68,25 @@ public class GameManager : NetworkBehaviour
     {
         if (!NetworkManager.Singleton.IsServer)
         {
-            gamePhase.OnValueChanged -= OnGamePhaseChanged;
+            gamePhase.OnValueChanged -= OnGamePhaseChanged; // remove client listener
         }
     }
 
-    // Update is called once per frame
-    void Update()
+    public override void OnDestroy()
     {
-        // game logic
-        if (hasStarted.Value)
-        {
-            if (NetworkManager.Singleton.IsServer)
-            {
-                if (gamePhase.Value == GamePhase.MOVING)
-                {
-                    if (timeLeft.Value <= 0.0f)
-                    {
-                        gamePhase.Value = GamePhase.AIMING;
-                        timeLeft.Value = timePerAim;
-                    }
-                    else
-                    {
-                        timeLeft.Value -= Time.deltaTime;
-                    }
-                }
-                else if (gamePhase.Value == GamePhase.AIMING)
-                {
-                    if (timeLeft.Value <= 0.0f)
-                    {
-                        gamePhase.Value = GamePhase.SHOOTING;
-                        timeLeft.Value = 0.0f;
-                    }
-                    else
-                    {
-                        timeLeft.Value -= Time.deltaTime;
-                    }
-                }
-                else if (gamePhase.Value == GamePhase.SHOOTING)
-                {
-                    // trigger next game phase after bullet despawned
-
-                    // next turn
-                    playerTurnIdx.Value = (playerTurnIdx.Value + 1) % PlayersManager.Instance.nPlayers;
-                    gamePhase.Value = GamePhase.MOVING;
-                    timeLeft.Value = timePerMove;
-                }
-            }
-
-            if (gamePhase.Value == GamePhase.INTERRUPTED)
-            {
-                ArenaUIManager.Instance.HideText();
-                ArenaUIManager.Instance.ShowInterrupted();
-            }
-            else if (gamePhase.Value == GamePhase.ENDED)
-            {
-                ArenaUIManager.Instance.ShowWinner(victoriousPlayerId.Value);
-            }
-            else
-            {
-                ArenaUIManager.Instance.ShowTimeLeft(timeLeft.Value);
-                ArenaUIManager.Instance.ShowGamePhase(gamePhase.Value);
-                ArenaUIManager.Instance.ShowTurn(PlayersManager.Instance.playersIds[playerTurnIdx.Value]);
-            }
-
-        }
-        else if (gamePhase.Value == GamePhase.WAITING && ArenaUIManager.Instance != null)
-        {
-            ArenaUIManager.Instance.ShowWaiting();
-        }
-    }
-
-    public string GetArenaName()
-    {
-        return arenaName.Value.ToString();
+        SceneManager.LoadScene(ScenesNames.MainScreen); // return to main menu on destroy
+        Instance = null;
     }
 
     public void OnGamePhaseChanged(GamePhase value, GamePhase newValue)
     {
         Debug.Log("New gamePhase: " + newValue);
+    }
+
+    public void SelectRandomArenaServer()
+    {
+        arenaName.Value = ScenesNames.SelectRandomArena();
+        Debug.Log("[Server] Arena selected: " + arenaName.Value);
     }
 
     public void OnArenaLoaded(Scene scene, LoadSceneMode loadMode)
@@ -154,9 +101,22 @@ public class GameManager : NetworkBehaviour
         }
     }
 
+    public void OnArenaLoadedServer(Scene scene, LoadSceneMode loadMode)
+    {
+        Debug.Log("[Server] Scene loaded: " + scene.name);
+
+        // proceed if the server has loaded the arena
+        if (scene.name == arenaName.Value)
+        {
+            serverLoaded.Value = true;
+            gamePhase.Value = GamePhase.WAITING;
+        }
+    }
+
     public void OnArenaLoadedClient(Scene scene, LoadSceneMode loadMode)
     {
         Debug.Log("[Client] Scene loaded: " + scene.name);
+
         // proceed if the client has loaded the arena
         if (scene.name == arenaName.Value)
         {
@@ -164,36 +124,17 @@ public class GameManager : NetworkBehaviour
         }
     }
 
-    public void OnArenaLoadedServer(Scene scene, LoadSceneMode loadMode)
-    {
-        Debug.Log("[Server] Scene loaded: " + scene.name);
-        // proceed if the server has loaded the arena
-        if (scene.name == arenaName.Value)
-        {
-            serverLoaded.Value = true;
-            gamePhase.Value = GamePhase.WAITING;
-            if (clientLoaded.Value)
-            {
-                StartGame();
-            }
-            else
-            {
-                Debug.Log("[Server] Waiting for client to load");
-            }
-        }
-    }
-
     [ServerRpc(RequireOwnership = false)]
     public void ClientLoadedServerRpc()
     {
-        if (serverLoaded.Value)
-        {
-            StartGame();
-        }
+        clientLoaded.Value = true;
     }
 
     public void LoadGame()
     {
+        Debug.Log("Host id: " + PlayersManager.Instance.hostId.Value);
+        Debug.Log("Client id: " + PlayersManager.Instance.clientId.Value);
+
         if (NetworkManager.Singleton.IsServer)
         {
             Debug.Log("[Server] Loading game...");
@@ -211,12 +152,14 @@ public class GameManager : NetworkBehaviour
     {
         if (NetworkManager.Singleton.IsServer)
         {
-            gamePhase.Value = GamePhase.MOVING;
-            StartGameClientRpc();
-            ArenaUIManager.Instance.HideText();
+            // instantiate Arena to start the game
+            GameObject arena = Instantiate(Resources.Load("Prefabs/ArenaManager"), Vector3.zero, Quaternion.identity) as GameObject;
+            arena.GetComponent<NetworkObject>().Spawn();
+
             hasStarted.Value = true;
-            timeLeft.Value = timePerMove;
-            playerTurnIdx.Value = 0;
+            gamePhase.Value = GamePhase.MOVING;
+            timeLeft.Value = timePerMove.Value;
+            playerTurnId.Value = PlayersManager.Instance.hostId.Value;  // the host goes first
             victoriousPlayerId.Value = ulong.MaxValue;
         }
         else
@@ -225,12 +168,115 @@ public class GameManager : NetworkBehaviour
         }
     }
 
-    [ClientRpc]
-    public void StartGameClientRpc()
+    // Update is called once per frame
+    void Update()
     {
-        Debug.Log("[Client] Starting game...");
-        Arena.Instance.StartGame();
-        ArenaUIManager.Instance.HideText();
+        // game logic
+        if (hasStarted.Value)
+        {
+            // Server-side logic
+
+            if (NetworkManager.Singleton.IsServer)
+            {
+                if (gamePhase.Value == GamePhase.MOVING)
+                {
+                    if (timeLeft.Value <= 0.0f)
+                    {
+                        gamePhase.Value = GamePhase.AIMING;
+                        timeLeft.Value = timePerAim.Value;
+                    }
+                    else
+                    {
+                        timeLeft.Value -= Time.deltaTime;
+                    }
+                }
+                else if (gamePhase.Value == GamePhase.AIMING)
+                {
+                    if (timeLeft.Value <= 0.0f)
+                    {
+                        gamePhase.Value = GamePhase.SHOOTING;
+                        timeLeft.Value = timePerShot.Value;
+
+                        // fire bullet from current player's turret
+                        shootingSuccessful.Value = Arena.Instance.InstantiateBullet(PlayersManager.Instance.players[playerTurnId.Value],
+                            ArenaUIManager.Instance.GetEquation());
+
+                        // if shooting not successful, revoke turn in 2 seconds
+                        if (!shootingSuccessful.Value)
+                        {
+                            ShotRevokedClientRpc();
+                        }
+                    }
+                    else
+                    {
+                        timeLeft.Value -= Time.deltaTime;
+                    }
+                }
+                else if (gamePhase.Value == GamePhase.SHOOTING)
+                {
+                    if (shootingSuccessful.Value)
+                    {
+                        if (timeLeft.Value <= 0.0f)
+                        {
+                            BulletMissServerRpc();  // the bullet missed if time ran out
+                        }
+                        else
+                        {
+                            timeLeft.Value -= Time.deltaTime;
+                        }
+                    }
+                }
+            }
+
+            // UI logic (for both host and client)
+
+            if (gamePhase.Value == GamePhase.INTERRUPTED)
+            {
+                ArenaUIManager.Instance.HideText();
+                ArenaUIManager.Instance.ShowInterrupted();
+            }
+            else if (gamePhase.Value == GamePhase.ENDED)
+            {
+                ArenaUIManager.Instance.ShowWinner(victoriousPlayerId.Value);
+            }
+            else
+            {
+                ArenaUIManager.Instance.ShowTimeLeft(timeLeft.Value);
+                ArenaUIManager.Instance.ShowGamePhase(gamePhase.Value);
+                ArenaUIManager.Instance.ShowTurn(playerTurnId.Value);
+                ArenaUIManager.Instance.ShowHealth();
+                ArenaUIManager.Instance.ShowEquationInput();
+            }
+        }
+        else if (gamePhase.Value == GamePhase.WAITING && ArenaUIManager.Instance != null)
+        {
+            // start game server-side if both players loaded
+            if (serverLoaded.Value && clientLoaded.Value && NetworkManager.Singleton.IsServer)
+            {
+                StartGame();
+            }
+            else
+            {
+                ArenaUIManager.Instance.ShowWaiting();
+            }
+        }
+    }
+
+    [ClientRpc]
+    public void ShotRevokedClientRpc()
+    {
+        Debug.Log("Shooting unsuccessful, turn revoked");
+        if (NetworkManager.Singleton.IsServer)
+        {
+            Invoke("NextTurn", 2.0f);
+        }
+    }
+
+    public void NextTurn()
+    {
+        playerTurnId.Value = playerTurnId.Value == PlayersManager.Instance.hostId.Value ? PlayersManager.Instance.clientId.Value : PlayersManager.Instance.hostId.Value;
+        gamePhase.Value = GamePhase.MOVING;
+        timeLeft.Value = timePerMove.Value;
     }
 
     [ServerRpc]
@@ -244,18 +290,11 @@ public class GameManager : NetworkBehaviour
         else
         {
             gamePhase.Value = GamePhase.ENDED;
-            victoriousPlayerId.Value = PlayersManager.Instance.playersIds[playerTurnIdx.Value];
+            victoriousPlayerId.Value = playerTurnId.Value;
             Debug.Log("Game ended... Player " + victoriousPlayerId.Value + " won!");
         }
 
         Invoke("BackToMenu", 3.0f);
-    }
-
-    public void BackToMenu()
-    {
-        Destroy(gameObject);
-        Destroy(PlayersManager.Instance.gameObject);
-        Destroy(NetworkManager.Singleton.gameObject);
     }
 
     public void StopGameClientServerShutdown()
@@ -265,20 +304,49 @@ public class GameManager : NetworkBehaviour
         Invoke("BackToMenu", 3.0f);
     }
 
+    public void BackToMenu()
+    {
+        Destroy(gameObject);
+        Destroy(PlayersManager.Instance.gameObject);
+        Destroy(NetworkManager.Singleton.gameObject);
+        SceneManager.LoadScene(ScenesNames.MainScreen);
+    }
+
     public bool HasEnded()
     {
         return gamePhase.Value == GamePhase.ENDED || gamePhase.Value == GamePhase.INTERRUPTED;
     }
 
-    public void SelectRandomArenaServer()
+    [ServerRpc]
+    public void BulletHitPlayerServerRpc(ulong playerId)
     {
-        arenaName.Value = ScenesNames.Arenas[UnityEngine.Random.Range(0, ScenesNames.Arenas.Length)];
-        Debug.Log("[Server] Arena selected: " + arenaName.Value);
+        Debug.Log("[Server] Player " + playerId + " hit");
+        Player player = PlayersManager.Instance.players[playerId];
+        player.Damage(1);
+        if (player.health <= 0)
+        {
+            player.Die();
+            Debug.Log("[Server] Player " + playerId + " is dead");
+            victoriousPlayerId.Value = playerTurnId.Value;
+            gamePhase.Value = GamePhase.ENDED;
+        }
+        else
+        {
+            NextTurn();
+        }
     }
 
-    public override void OnDestroy()
+    [ServerRpc]
+    public void BulletHitWallServerRpc()
     {
-        SceneManager.LoadScene(ScenesNames.MainScreen);
-        Instance = null;
+        Debug.Log("[Server] Hit the wall");
+        NextTurn();
+    }
+
+    [ServerRpc]
+    public void BulletMissServerRpc()
+    {
+        Debug.Log("[Server] Bullet missed");
+        NextTurn();
     }
 }

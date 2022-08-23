@@ -1,11 +1,17 @@
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
+/// <summary>
+/// Manages the players connected to a match.
+/// </summary>
 public class PlayersManager : NetworkBehaviour
 {
-
-    public ulong[] playersIds = new ulong[2]; // list of players ids (max 2 players)
-    public int nPlayers = 0; // number of players
+    public static int MAX_PLAYERS = 2;
+    public NetworkVariable<ulong> hostId = new NetworkVariable<ulong>();
+    public NetworkVariable<ulong> clientId = new NetworkVariable<ulong>();
+    public Dictionary<ulong, Player> players = new Dictionary<ulong, Player>(); // (available on server)
+    public NetworkVariable<int> nPlayersConnected = new NetworkVariable<int>(0);
     public static PlayersManager Instance;
 
     private void Awake()
@@ -14,26 +20,42 @@ public class PlayersManager : NetworkBehaviour
         Instance = this;
     }
 
-    // Start is called before the first frame update
-    void Start()
+    public override void OnNetworkSpawn()
     {
-        // add callbacks when a player joins or leaves the game
+        if (NetworkManager.Singleton.IsServer)
+        {
+            // add host id server-side
+            hostId.Value = NetworkManager.Singleton.LocalClientId;
+            nPlayersConnected.Value = 1;
+            Debug.Log("[Server] My id is " + hostId.Value);
+        }
+        else
+        {
+            Debug.Log("[Client] My id is " + clientId.Value);
+        }
+
+        // Add callbacks for when a player joins or leaves the game
 
         NetworkManager.Singleton.OnClientConnectedCallback += (id) =>
         {
-            if (NetworkManager.Singleton.IsServer)
+            if (nPlayersConnected.Value < MAX_PLAYERS && NetworkManager.Singleton.IsServer)
             {
-                if (nPlayers < 2)
+                // accept connection server-side
+                clientId.Value = id;
+                ++nPlayersConnected.Value;
+                NotifyConnected(id);
+            }
+            else
+            {
+                if (NetworkManager.Singleton.IsServer)
                 {
-                    // accept connection
-                    playersIds[nPlayers++] = id;
-                    NotifyConnected(id);
+                    // refuse connection server-side
+                    NetworkManager.Singleton.DisconnectClient(id);
+                    Debug.Log("[Server] Too many players");
                 }
                 else
                 {
-                    // refuse connection
-                    NetworkManager.Singleton.DisconnectClient(id);
-                    Debug.Log("[Server] Too many players");
+                    Debug.Log("[Client] Too many players");
                 }
             }
         };
@@ -43,6 +65,7 @@ public class PlayersManager : NetworkBehaviour
             if (NetworkManager.Singleton.IsServer)
             {
                 // stop the game and go back to lobby
+                --nPlayersConnected.Value;
                 NotifyDisconnected(id);
                 GameManager.Instance.StopGameServerRpc(true);
             }
@@ -55,10 +78,9 @@ public class PlayersManager : NetworkBehaviour
         };
     }
 
-    // Update is called once per frame
-    void Update()
+    public override void OnDestroy()
     {
-
+        Instance = null;
     }
 
     /**
@@ -85,8 +107,13 @@ public class PlayersManager : NetworkBehaviour
         }
     }
 
-    public override void OnDestroy()
+    /// <summary>
+    /// Adds an association between the id and the player object in the dictionary.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="player"></param>
+    public void AddPlayerToDictionary(ulong id, Player player)
     {
-        Instance = null;
+        players.Add(id, player);
     }
 }

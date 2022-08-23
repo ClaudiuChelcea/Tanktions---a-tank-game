@@ -1,11 +1,13 @@
 using TMPro;
 using UnityEngine;
 
+/// <summary>
+/// Manages the HUD while in gameplay.
+/// </summary>
 public class ArenaUIManager : MonoBehaviour
 {
     // Singleton
     public static ArenaUIManager Instance { get; private set; }
-
     [SerializeField]
     private TMP_Text playersConnection;
     [SerializeField]
@@ -16,6 +18,11 @@ public class ArenaUIManager : MonoBehaviour
     private TMP_Text turn;
     [SerializeField]
     private TMP_Text winner;
+    [SerializeField]
+    private TMP_Text health;
+    [SerializeField]
+    private TMP_InputField equationInput;
+
 
     private void Awake()
     {
@@ -25,6 +32,11 @@ public class ArenaUIManager : MonoBehaviour
     private void Start()
     {
         HideText();
+    }
+
+    public void OnDestroy()
+    {
+        Instance = null;
     }
 
     public void ShowConnectedMessage(ulong id)
@@ -63,6 +75,12 @@ public class ArenaUIManager : MonoBehaviour
         turn.text = "Turn: Player " + id;
     }
 
+    public void ShowHealth()
+    {
+        health.enabled = true;
+        health.text = "Health: " + Player.Instance.health;
+    }
+
     public void ShowWinner(ulong id)
     {
         winner.enabled = true;
@@ -75,6 +93,16 @@ public class ArenaUIManager : MonoBehaviour
         winner.text = "The opponent disconnected...";
     }
 
+    public void ShowEquationInput()
+    {
+        equationInput.enabled = true;
+    }
+
+    public string GetEquation()
+    {
+        return equationInput.text;
+    }
+
     public void HideText()
     {
         playersConnection.enabled = false;
@@ -82,10 +110,7 @@ public class ArenaUIManager : MonoBehaviour
         gamePhase.enabled = false;
         winner.enabled = false;
         turn.enabled = false;
-    }
-
-    public void OnDestroy()
-    {
-        Instance = null;
+        health.enabled = false;
+        equationInput.enabled = false;
     }
 }

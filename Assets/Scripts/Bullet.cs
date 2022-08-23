@@ -5,29 +5,14 @@ using Unity.Netcode;
 
 public class Bullet : NetworkBehaviour
 {
-    private Func<float, float> trajectoryEquation;
+    private Func<double, double> trajectoryEquation;
     private bool wasFired = false;
-    private float xAxisSwipeSpeed = 0.1f;
+    [SerializeField]
+    private float xAxisSwipeSpeed = 10000.0f;
+    private float initialX;
+    private float initialY;
+    private ulong playerId;
 
-    public void Spawn(Vector3 position, string equation)
-    {
-        transform.position = position;
-        trajectoryEquation = createEquation(equation);
-    }
-
-    public static Func<float, float> createEquation(string equation)
-    {
-        ExpressionContext context = new ExpressionContext();
-        context.Variables["x"] = 0.0;
-
-        IDynamicExpression e = context.CompileDynamic(equation);
-
-        return (float x) =>
-        {
-            context.Variables["x"] = x;
-            return (float)e.Evaluate();
-        };
-    }
 
     // Start is called before the first frame update
     void Start()
@@ -38,13 +23,82 @@ public class Bullet : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (NetworkManager.Singleton.IsServer)
+        if (IsClient && IsOwner)
         {
             if (wasFired)
             {
-                float newX = transform.position.x + xAxisSwipeSpeed * Time.deltaTime;
-                transform.position = new Vector3(newX, trajectoryEquation(newX), transform.position.z);
+                if (GameManager.Instance.gamePhase.Value != GameManager.GamePhase.SHOOTING)
+                {
+                    // destroy the bullet if it is not in the shooting phase
+                    Destroy(gameObject);
+                }
+                else
+                {
+                    float newX = transform.position.x + xAxisSwipeSpeed * Time.deltaTime;
+                    transform.position = new Vector3(newX, (float)trajectoryEquation(newX - initialX) + initialY, transform.position.z);
+                }
             }
+        }
+    }
+
+    public void CreateBullet(Vector3 position, Func<double, double> equation, ulong id)
+    {
+        playerId = id;
+        transform.position = position;
+        trajectoryEquation = equation;
+        initialX = position.x;
+        initialY = position.y;
+    }
+
+    public void FireBullet()
+    {
+        if (!wasFired)
+        {
+            wasFired = true;
+        }
+    }
+
+    /// <summary>
+    /// Creates a function that returns the y-coordinate of the bullet's trajectory at a given x-coordinate,
+    /// given the equation written as f(x) in a string.
+    /// </summary>
+    /// <param name="equation">string containing the equation in x</param>
+    /// <returns></returns>
+    public static Func<double, double> CreateEquation(string equation)
+    {
+        ExpressionContext context = new ExpressionContext();
+        context.Variables["x"] = 0.0;
+        context.Imports.AddType(typeof(Math));
+
+        // catch exceptions
+        try
+        {
+            IGenericExpression<double> e = context.CompileGeneric<double>(equation);
+            return (double x) =>
+            {
+                context.Variables["x"] = x;
+                return e.Evaluate();
+            };
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[Equation Parser Error] " + ex.Message);
+            return null;
+        }
+    }
+
+
+
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        GameObject other = collision.gameObject;
+        if (other.tag == "Player")
+        {
+            GameManager.Instance.BulletHitPlayerServerRpc(other.GetComponent<Player>().playerId);
+        }
+        else if (other.tag == "Walls")
+        {
+            GameManager.Instance.BulletHitWallServerRpc();
         }
     }
 }

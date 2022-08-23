@@ -5,6 +5,9 @@ using UnityEngine.UI;
 using TMPro;
 using System;
 
+/// <summary>
+/// Manages the loading operation for the arena.
+/// </summary>
 public class LoadingScreen : MonoBehaviour
 {
     // Get level loader progress bar
@@ -20,11 +23,7 @@ public class LoadingScreen : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        if (MainMenu.play_button_pressed == true)
-        {
-            StartCoroutine(LoadAsyncOperation());
-            MainMenu.play_button_pressed = false;
-        }
+        StartCoroutine(LoadAsyncOperation());
     }
 
     private IEnumerator LoadAsyncOperation()
