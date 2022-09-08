@@ -1,4 +1,3 @@
-using System;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -101,9 +100,22 @@ public class Arena : NetworkBehaviour
     {
         if (NetworkManager.Singleton.IsServer)
         {
-            // add players to dictionary
-            PlayersManager.Instance.AddPlayerToDictionary(PlayersManager.Instance.hostId.Value, playerHost.GetComponent<Player>());
-            PlayersManager.Instance.AddPlayerToDictionary(PlayersManager.Instance.clientId.Value, playerClient.GetComponent<Player>());
+            AddPlayersToDictionaryClientRpc();
+        }
+    }
+
+    [ClientRpc]
+    public void AddPlayersToDictionaryClientRpc()
+    {
+        Player[] players = GameObject.FindObjectsOfType<Player>();
+        if (players.GetLength(0) == 2)
+        {
+            PlayersManager.Instance.AddPlayerToDictionary(players[0].playerId, players[0]);
+            PlayersManager.Instance.AddPlayerToDictionary(players[1].playerId, players[1]);
+        }
+        else
+        {
+            Debug.LogError("Could not add players to dictionary, did not found exactly 2 players");
         }
     }
 
@@ -111,31 +123,18 @@ public class Arena : NetworkBehaviour
     /// Instantiates the bullet in the arena, given the player owner and the equation prompt.
     /// </summary>
     /// <param name="player"></param>
-    /// <param name="equation"></param>
     /// <returns></returns>
-    public bool InstantiateBullet(Player player, string equation)
+    public void InstantiateBullet(Player player)
     {
         // get turret position
-        Vector3 turretPosition = player.turretPivot.position;
-
-        // parse equation
-        Func<double, double> equationFunc = Bullet.CreateEquation(equation);
-
-        if (equationFunc == null)
-        {
-            Debug.Log("Bullet could not be spawned");
-            return false;
-        }
+        Vector3 turretPosition = player.turretPeak.position;
 
         // spawn bullet
         bullet = Instantiate(Resources.Load("Prefabs/Bullet"), turretPosition, Quaternion.identity) as GameObject;
-        bullet.GetComponent<Bullet>().CreateBullet(turretPosition, equationFunc, player.playerId);
         bullet.GetComponent<NetworkObject>().SpawnWithOwnership(player.playerId);
         Debug.Log("Bullet spawned");
 
         // fire bullet
-        bullet.GetComponent<Bullet>().FireBullet();
-        Debug.Log("Bullet fired");
-        return true;
+        bullet.GetComponent<Bullet>().FireBulletClientRpc(turretPosition, player.playerId);
     }
 }

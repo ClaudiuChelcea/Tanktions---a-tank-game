@@ -6,12 +6,16 @@ using Unity.Netcode;
 public class Bullet : NetworkBehaviour
 {
     private Func<double, double> trajectoryEquation;
+    private string trajectoryEquationString;
     private bool wasFired = false;
-    [SerializeField]
-    private float xAxisSwipeSpeed = 10000.0f;
+    private float xAxisSwipeSpeed = 1.5f;
     private float initialX;
     private float initialY;
+    private float prevX;
+    private float prevY;
     private ulong playerId;
+    private bool stopped = false;
+    private int baseDamage = 50;
 
 
     // Start is called before the first frame update
@@ -20,41 +24,90 @@ public class Bullet : NetworkBehaviour
 
     }
 
-    // Update is called once per frame
-    void Update()
+    public override void OnNetworkSpawn()
     {
-        if (IsClient && IsOwner)
+        if (IsOwner)
         {
-            if (wasFired)
-            {
-                if (GameManager.Instance.gamePhase.Value != GameManager.GamePhase.SHOOTING)
-                {
-                    // destroy the bullet if it is not in the shooting phase
-                    Destroy(gameObject);
-                }
-                else
-                {
-                    float newX = transform.position.x + xAxisSwipeSpeed * Time.deltaTime;
-                    transform.position = new Vector3(newX, (float)trajectoryEquation(newX - initialX) + initialY, transform.position.z);
-                }
-            }
+            trajectoryEquationString = ArenaUIManager.Instance.GetEquation();
         }
     }
 
-    public void CreateBullet(Vector3 position, Func<double, double> equation, ulong id)
+    // Update is called once per frame
+    void Update()
+    {
+        if (IsClient && IsOwner && wasFired && !stopped)
+        {
+            if (IsServer)
+            {
+                float newX = transform.position.x + xAxisSwipeSpeed * Time.deltaTime;
+                transform.position = new Vector3(newX, (float)trajectoryEquation(newX - initialX) + initialY, transform.position.z);
+            }
+            else
+            {
+                float newX = transform.position.x - xAxisSwipeSpeed * Time.deltaTime;
+                transform.position = new Vector3(newX, -(float)trajectoryEquation(initialX - newX) + initialY, transform.position.z);
+            }
+
+            // rotate bullet to the angle determined by the old coordinates and the new coordinates
+            float angle = Mathf.Atan2(transform.position.y - prevY, transform.position.x - prevX) * Mathf.Rad2Deg;
+            transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+
+            prevX = transform.position.x;
+            prevY = transform.position.y;
+        }
+    }
+
+    public bool CreateBullet(Vector3 position, ulong id)
     {
         playerId = id;
         transform.position = position;
-        trajectoryEquation = equation;
+        trajectoryEquation = CreateEquation(trajectoryEquationString);
+        if (trajectoryEquation == null)
+        {
+            return false;
+        }
+
         initialX = position.x;
-        initialY = position.y;
+        if (IsServer)
+        {
+            initialY = position.y - (float)trajectoryEquation(0.0);
+        }
+        else
+        {
+            initialY = position.y + (float)trajectoryEquation(0.0);
+        }
+
+        // return false if initialY is not a number or is infinite
+        if (float.IsNaN(initialY) || float.IsInfinity(initialY))
+        {
+            return false;
+        }
+
+        prevX = initialX;
+        prevY = initialY;
+
+        return true;
     }
 
-    public void FireBullet()
+    [ClientRpc]
+    public void FireBulletClientRpc(Vector3 position, ulong id)
     {
-        if (!wasFired)
+        if (IsOwner)
         {
-            wasFired = true;
+            if (!wasFired)
+            {
+                if (CreateBullet(position, id))
+                {
+                    wasFired = true;
+                    Debug.Log("Fired bullet with equation: " + trajectoryEquationString);
+                }
+                else
+                {
+                    Debug.Log("Failed to fire bullet");
+                    DespawnServerRpc();
+                    GameManager.Instance.BulletFireFailedServerRpc();
+                }
+            }
         }
     }
 
@@ -87,18 +140,35 @@ public class Bullet : NetworkBehaviour
         }
     }
 
-
-
-    void OnCollisionEnter2D(Collision2D collision)
+    void OnTriggerEnter2D(Collider2D collider)
     {
-        GameObject other = collision.gameObject;
+        if (stopped)
+        {
+            return;
+        }
+
+        GameObject other = collider.gameObject;
         if (other.tag == "Player")
         {
-            GameManager.Instance.BulletHitPlayerServerRpc(other.GetComponent<Player>().playerId);
+            GameManager.Instance.BulletHitPlayerServerRpc(other.GetComponent<Player>().playerId, baseDamage);
         }
-        else if (other.tag == "Walls")
+        else if (other.tag == "Obstacle")
         {
-            GameManager.Instance.BulletHitWallServerRpc();
+            GameManager.Instance.BulletHitObstacleServerRpc();
         }
+        else
+        {
+            return;
+        }
+
+        stopped = true;
+        DespawnServerRpc();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    void DespawnServerRpc()
+    {
+        Debug.Log("Destroying bullet");
+        GetComponent<NetworkObject>().Despawn();
     }
 }

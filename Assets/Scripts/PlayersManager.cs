@@ -29,21 +29,21 @@ public class PlayersManager : NetworkBehaviour
             nPlayersConnected.Value = 1;
             Debug.Log("[Server] My id is " + hostId.Value);
         }
-        else
-        {
-            Debug.Log("[Client] My id is " + clientId.Value);
-        }
 
         // Add callbacks for when a player joins or leaves the game
 
         NetworkManager.Singleton.OnClientConnectedCallback += (id) =>
         {
-            if (nPlayersConnected.Value < MAX_PLAYERS && NetworkManager.Singleton.IsServer)
+            if (nPlayersConnected.Value < MAX_PLAYERS)
             {
-                // accept connection server-side
-                clientId.Value = id;
-                ++nPlayersConnected.Value;
-                NotifyConnected(id);
+                if (NetworkManager.Singleton.IsServer)
+                {
+                    // accept connection server-side
+                    clientId.Value = id;
+                    Debug.Log("[Client] My id is " + clientId.Value);
+                    ++nPlayersConnected.Value;
+                    NotifyConnected(id);
+                }
             }
             else
             {

@@ -16,10 +16,13 @@ public class GameManager : NetworkBehaviour
     public NetworkVariable<bool> serverLoaded = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> clientLoaded = new NetworkVariable<bool>(false);
     public NetworkVariable<float> timeLeft = new NetworkVariable<float>();
-    private NetworkVariable<float> timePerMove = new NetworkVariable<float>(10.0f);
-    private NetworkVariable<float> timePerAim = new NetworkVariable<float>(10.0f);
-    private NetworkVariable<float> timePerShot = new NetworkVariable<float>(10.0f);
+    private NetworkVariable<float> timePerMove = new NetworkVariable<float>(5.0f);
+    private NetworkVariable<float> timePerAim = new NetworkVariable<float>(35.0f);
+    private NetworkVariable<float> timePerShot = new NetworkVariable<float>(15.0f);
     private NetworkVariable<bool> shootingSuccessful = new NetworkVariable<bool>(false);
+    private NetworkVariable<bool> bulletStopped = new NetworkVariable<bool>(false);
+    private NetworkVariable<bool> bulletHitTarget = new NetworkVariable<bool>(false);
+    private bool lostConnection = false;
 
     public enum GamePhase
     {
@@ -196,16 +199,10 @@ public class GameManager : NetworkBehaviour
                     {
                         gamePhase.Value = GamePhase.SHOOTING;
                         timeLeft.Value = timePerShot.Value;
+                        shootingSuccessful.Value = true;
 
                         // fire bullet from current player's turret
-                        shootingSuccessful.Value = Arena.Instance.InstantiateBullet(PlayersManager.Instance.players[playerTurnId.Value],
-                            ArenaUIManager.Instance.GetEquation());
-
-                        // if shooting not successful, revoke turn in 2 seconds
-                        if (!shootingSuccessful.Value)
-                        {
-                            ShotRevokedClientRpc();
-                        }
+                        Arena.Instance.InstantiateBullet(PlayersManager.Instance.players[playerTurnId.Value]);
                     }
                     else
                     {
@@ -230,22 +227,52 @@ public class GameManager : NetworkBehaviour
 
             // UI logic (for both host and client)
 
-            if (gamePhase.Value == GamePhase.INTERRUPTED)
+            if (gamePhase.Value == GamePhase.INTERRUPTED || lostConnection)
             {
                 ArenaUIManager.Instance.HideText();
                 ArenaUIManager.Instance.ShowInterrupted();
             }
             else if (gamePhase.Value == GamePhase.ENDED)
             {
+                ArenaUIManager.Instance.HideText();
                 ArenaUIManager.Instance.ShowWinner(victoriousPlayerId.Value);
+            }
+            else if (gamePhase.Value == GamePhase.SHOOTING)
+            {
+                if (!shootingSuccessful.Value)
+                {
+                    ArenaUIManager.Instance.ShowBulletText("Misfire! Equation invalid!");
+                }
+                else
+                {
+                    if (bulletStopped.Value)
+                    {
+                        if (bulletHitTarget.Value)
+                        {
+                            ArenaUIManager.Instance.ShowBulletText("Hit!");
+                        }
+                        else
+                        {
+                            ArenaUIManager.Instance.ShowBulletText("Miss!");
+                        }
+                    }
+                }
             }
             else
             {
+                ArenaUIManager.Instance.HideText();
                 ArenaUIManager.Instance.ShowTimeLeft(timeLeft.Value);
                 ArenaUIManager.Instance.ShowGamePhase(gamePhase.Value);
                 ArenaUIManager.Instance.ShowTurn(playerTurnId.Value);
-                ArenaUIManager.Instance.ShowHealth();
                 ArenaUIManager.Instance.ShowEquationInput();
+                if (NetworkManager.Singleton.IsHost)
+                {
+                    ArenaUIManager.Instance.ShowHealth(PlayersManager.Instance.players[PlayersManager.Instance.hostId.Value]);
+                }
+                else
+                {
+                    ArenaUIManager.Instance.ShowHealth(PlayersManager.Instance.players[PlayersManager.Instance.clientId.Value]);
+                }
             }
         }
         else if (gamePhase.Value == GamePhase.WAITING && ArenaUIManager.Instance != null)
@@ -257,6 +284,7 @@ public class GameManager : NetworkBehaviour
             }
             else
             {
+                ArenaUIManager.Instance.HideText();
                 ArenaUIManager.Instance.ShowWaiting();
             }
         }
@@ -268,12 +296,15 @@ public class GameManager : NetworkBehaviour
         Debug.Log("Shooting unsuccessful, turn revoked");
         if (NetworkManager.Singleton.IsServer)
         {
+            shootingSuccessful.Value = false;
             Invoke("NextTurn", 2.0f);
         }
     }
 
     public void NextTurn()
     {
+        bulletHitTarget.Value = false;
+        bulletStopped.Value = false;
         playerTurnId.Value = playerTurnId.Value == PlayersManager.Instance.hostId.Value ? PlayersManager.Instance.clientId.Value : PlayersManager.Instance.hostId.Value;
         gamePhase.Value = GamePhase.MOVING;
         timeLeft.Value = timePerMove.Value;
@@ -286,6 +317,7 @@ public class GameManager : NetworkBehaviour
         {
             gamePhase.Value = GamePhase.INTERRUPTED;
             Debug.Log("Opponent disconnected... Going back to menu...");
+            lostConnection = true;
         }
         else
         {
@@ -300,12 +332,13 @@ public class GameManager : NetworkBehaviour
     public void StopGameClientServerShutdown()
     {
         Debug.Log("[Client] Server closed... Going back to menu...");
-        ArenaUIManager.Instance.ShowInterrupted();
         Invoke("BackToMenu", 3.0f);
+        lostConnection = true;
     }
 
     public void BackToMenu()
     {
+        Debug.Log("Back to Main Menu");
         Destroy(gameObject);
         Destroy(PlayersManager.Instance.gameObject);
         Destroy(NetworkManager.Singleton.gameObject);
@@ -317,13 +350,17 @@ public class GameManager : NetworkBehaviour
         return gamePhase.Value == GamePhase.ENDED || gamePhase.Value == GamePhase.INTERRUPTED;
     }
 
-    [ServerRpc]
-    public void BulletHitPlayerServerRpc(ulong playerId)
+    [ServerRpc(RequireOwnership = false)]
+    public void BulletHitPlayerServerRpc(ulong playerId, int damage)
     {
+        bulletStopped.Value = true;
+        bulletHitTarget.Value = true;
         Debug.Log("[Server] Player " + playerId + " hit");
         Player player = PlayersManager.Instance.players[playerId];
-        player.Damage(1);
-        if (player.health <= 0)
+        player.health.Value -= damage;
+        Debug.Log("[Server] Player " + playerId + " has been damaged by " + damage);
+
+        if (player.health.Value <= 0)
         {
             player.Die();
             Debug.Log("[Server] Player " + playerId + " is dead");
@@ -332,21 +369,34 @@ public class GameManager : NetworkBehaviour
         }
         else
         {
-            NextTurn();
+            Invoke("NextTurn", 2.0f);
         }
     }
 
-    [ServerRpc]
-    public void BulletHitWallServerRpc()
+    [ServerRpc(RequireOwnership = false)]
+    public void BulletHitObstacleServerRpc()
     {
-        Debug.Log("[Server] Hit the wall");
-        NextTurn();
+        bulletStopped.Value = true;
+        bulletHitTarget.Value = false;
+        Debug.Log("[Server] Hit an obstacle");
+        Invoke("NextTurn", 2.0f);
     }
 
-    [ServerRpc]
+    [ServerRpc(RequireOwnership = false)]
     public void BulletMissServerRpc()
     {
+        bulletStopped.Value = true;
+        bulletHitTarget.Value = false;
         Debug.Log("[Server] Bullet missed");
-        NextTurn();
+        Invoke("NextTurn", 2.0f);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void BulletFireFailedServerRpc()
+    {
+        bulletStopped.Value = true;
+        bulletHitTarget.Value = false;
+        Debug.Log("[Server] Bullet fire failed");
+        ShotRevokedClientRpc();
     }
 }

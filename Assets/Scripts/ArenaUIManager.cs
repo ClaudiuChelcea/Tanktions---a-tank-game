@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Manages the HUD while in gameplay.
@@ -19,9 +20,13 @@ public class ArenaUIManager : MonoBehaviour
     [SerializeField]
     private TMP_Text winner;
     [SerializeField]
-    private TMP_Text health;
+    private Button healthButton;
+    [SerializeField]
+    private TMP_Text healthButtonText;
     [SerializeField]
     private TMP_InputField equationInput;
+    [SerializeField]
+    private Button exitButton;
 
 
     private void Awake()
@@ -32,6 +37,11 @@ public class ArenaUIManager : MonoBehaviour
     private void Start()
     {
         HideText();
+
+        exitButton.onClick.AddListener(() =>
+        {
+            GameManager.Instance.BackToMenu();
+        });
     }
 
     public void OnDestroy()
@@ -41,61 +51,66 @@ public class ArenaUIManager : MonoBehaviour
 
     public void ShowConnectedMessage(ulong id)
     {
-        playersConnection.enabled = true;
+        playersConnection.gameObject.SetActive(true);
         playersConnection.text = "Player " + id + " connected";
     }
 
     public void ShowDisconnectedMessage(ulong id)
     {
-        playersConnection.enabled = true;
+        playersConnection.gameObject.SetActive(true);
         playersConnection.text = "Player " + id + " disconnected";
     }
 
     public void ShowTimeLeft(float time)
     {
-        timeLeft.enabled = true;
+        timeLeft.gameObject.SetActive(true);
         timeLeft.text = "Time left: " + time.ToString("00.00");
     }
 
     public void ShowGamePhase(GameManager.GamePhase phase)
     {
-        gamePhase.enabled = true;
+        gamePhase.gameObject.SetActive(true);
         gamePhase.text = "Game phase: " + phase;
     }
 
     public void ShowWaiting()
     {
-        winner.enabled = true;
+        winner.gameObject.SetActive(true);
         winner.text = "Waiting for opponent to join...";
     }
 
     public void ShowTurn(ulong id)
     {
-        turn.enabled = true;
+        turn.gameObject.SetActive(true);
         turn.text = "Turn: Player " + id;
     }
 
-    public void ShowHealth()
+    public void ShowHealth(Player player)
     {
-        health.enabled = true;
-        health.text = "Health: " + Player.Instance.health;
+        healthButton.gameObject.SetActive(true);
+        healthButtonText.text = "Health: " + player.health.Value;
     }
 
     public void ShowWinner(ulong id)
     {
-        winner.enabled = true;
+        winner.gameObject.SetActive(true);
         winner.text = "Player " + id + " won!";
     }
 
     public void ShowInterrupted()
     {
-        winner.enabled = true;
+        winner.gameObject.SetActive(true);
         winner.text = "The opponent disconnected...";
     }
 
     public void ShowEquationInput()
     {
-        equationInput.enabled = true;
+        equationInput.gameObject.SetActive(true);
+    }
+
+    public void HideEquationInput()
+    {
+        equationInput.gameObject.SetActive(false);
     }
 
     public string GetEquation()
@@ -103,14 +118,19 @@ public class ArenaUIManager : MonoBehaviour
         return equationInput.text;
     }
 
+    public void ShowBulletText(string text)
+    {
+        winner.gameObject.SetActive(true);
+        winner.text = text;
+    }
+
     public void HideText()
     {
-        playersConnection.enabled = false;
-        timeLeft.enabled = false;
-        gamePhase.enabled = false;
-        winner.enabled = false;
-        turn.enabled = false;
-        health.enabled = false;
-        equationInput.enabled = false;
+        playersConnection.gameObject.SetActive(false);
+        timeLeft.gameObject.SetActive(false);
+        gamePhase.gameObject.SetActive(false);
+        turn.gameObject.SetActive(false);
+        winner.gameObject.SetActive(false);
+        healthButton.gameObject.SetActive(false);
     }
 }

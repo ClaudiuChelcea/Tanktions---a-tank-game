@@ -10,9 +10,17 @@ public class ScenesNames : MonoBehaviour
     public static string MultiplayerMenu = "MultiplayerMenu";
     public static string LoadingScreen = "LoadingScreen";
     public static string ArenaIndustrial = "ArenaIndustrial";
+    public static string ArenaGalaxy = "ArenaGalaxy";
+    public static string ArenaCity = "ArenaCity";
+    public static string ArenaNether = "ArenaNether";
+    public static string ArenaForest = "ArenaForest";
 
     public static string[] Arenas = new string[] {
-        ArenaIndustrial
+        ArenaIndustrial,
+        ArenaGalaxy,
+        ArenaCity,
+        ArenaNether,
+        ArenaForest
     };
 
     public static string SelectRandomArena()

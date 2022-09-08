@@ -20,4 +20,16 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/ArenaIndustrial.unity
     guid: 52c89632ba1d5bf4ca93f99165005e73
+  - enabled: 1
+    path: Assets/Scenes/ArenaGalaxy.unity
+    guid: 23dded2b8558c014cbf180015cf4c990
+  - enabled: 1
+    path: Assets/Scenes/ArenaForest.unity
+    guid: c2ec4f3b29c02734082652f0df024a79
+  - enabled: 1
+    path: Assets/Scenes/ArenaNether.unity
+    guid: c93cb76b016df9f489c44c67d0c23f37
+  - enabled: 1
+    path: Assets/Scenes/ArenaCity.unity
+    guid: cc8a991179a055b4aa2247660ff640cc
   m_configObjects: {}

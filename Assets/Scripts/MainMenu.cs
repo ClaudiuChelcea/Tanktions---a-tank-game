@@ -11,6 +11,8 @@ public class MainMenu : MonoBehaviour
     public AudioSource audioSource;
     [SerializeField]
     private Button startButton;
+    [SerializeField]
+    private Button exitButton;
 
     // On scene load, play music
     private void Awake()
@@ -23,6 +25,11 @@ public class MainMenu : MonoBehaviour
         startButton.onClick.AddListener(() =>
         {
             SceneManager.LoadScene(ScenesNames.MultiplayerMenu);
+        });
+
+        exitButton.onClick.AddListener(() =>
+        {
+            Application.Quit();
         });
     }
 

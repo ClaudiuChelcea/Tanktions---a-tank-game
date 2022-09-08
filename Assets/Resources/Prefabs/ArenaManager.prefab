@@ -32,7 +32,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 2
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &3224382443869640689
 MonoBehaviour:
@@ -57,7 +57,7 @@ AudioSource:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3224382443869640698}
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 8300000, guid: 914f3e0a69e69854785efbc61c3f1e55, type: 3}
@@ -158,6 +158,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0644ba748f1283441beede991b5380c1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  arenaCamera: {fileID: 0}
   audioSource: {fileID: 3224382443869640703}
-  spawnPoint: {fileID: 0}

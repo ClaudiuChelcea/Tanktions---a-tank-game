@@ -9,19 +9,11 @@ public class Player : NetworkBehaviour
 {
     [SerializeField]
     private float moveSpeed = 1.5f;
-    public Transform turretPivot;
-    public TMP_Text playerName; // HUD name
     [SerializeField]
-    private float aimSpeed = 100.0f;
-    public int health = 100;
+    public Transform turretPeak;
+    public TMP_Text playerName; // HUD name
+    public NetworkVariable<int> health = new NetworkVariable<int>(100);
     public ulong playerId;
-    public static Player Instance;
-
-
-    void Awake()
-    {
-        Instance = this;
-    }
 
     public override void OnNetworkSpawn()
     {
@@ -32,10 +24,14 @@ public class Player : NetworkBehaviour
             if (IsOwner)
             {
                 playerId = PlayersManager.Instance.hostId.Value;
+                Rigidbody2D rb = GetComponent<Rigidbody2D>();
+                rb.gravityScale = 1;
             }
             else
             {
                 playerId = PlayersManager.Instance.clientId.Value;
+                Rigidbody2D rb = GetComponent<Rigidbody2D>();
+                rb.gravityScale = -1;
             }
         }
         else
@@ -43,16 +39,20 @@ public class Player : NetworkBehaviour
             if (IsOwner)
             {
                 playerId = PlayersManager.Instance.clientId.Value;
+                Rigidbody2D rb = GetComponent<Rigidbody2D>();
+                rb.gravityScale = -1;
+
             }
             else
             {
                 playerId = PlayersManager.Instance.hostId.Value;
+                Rigidbody2D rb = GetComponent<Rigidbody2D>();
+                rb.gravityScale = 1;
             }
         }
 
         playerName.text = "Player " + playerId;
     }
-
 
     void Update()
     {
@@ -82,27 +82,10 @@ public class Player : NetworkBehaviour
 
     private void AimClient()
     {
-        float xAxisInput = -Input.GetAxis("Horizontal"); // range [1, -1]
-        float angleDelta = xAxisInput * aimSpeed * Time.deltaTime;
-        turretPivot.Rotate(0, 0, angleDelta);
-    }
-
-    public void Damage(int damage)
-    {
-        if (IsClient && IsOwner)
-        {
-            health -= damage;
-            Debug.Log("Player " + playerId + " has " + health + " health remaining.");
-
-            if (health <= 0)
-            {
-                Die();
-            }
-        }
     }
 
     public void Die()
     {
-        Destroy(gameObject);
+        GetComponent<NetworkObject>().Despawn();
     }
 }

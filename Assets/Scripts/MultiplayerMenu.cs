@@ -62,7 +62,6 @@ public class MultiplayerMenu : NetworkBehaviour
         {
             StopAllCoroutines();
             GameManager.Instance.BackToMenu();
-            Debug.Log("Back to Main Menu");
         });
     }
 
